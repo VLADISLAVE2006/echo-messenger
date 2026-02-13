@@ -1,0 +1,52 @@
+@use 'functions' as *;
+
+:root {
+	/* Base colors */
+	--color-white: #ffffff;
+	--color-bg-primary: #ffffff;
+	--color-bg-secondary: #f9fafb;
+	--color-bg-hover: #f3f4f6;
+	
+	--color-text-primary: #111827;
+	--color-text-secondary: #6b7280;
+	--color-text-muted: #9ca3af;
+	
+	/* Border */
+	--color-border: #e5e7eb;
+	--color-border-hover: #d1d5db;
+	
+	/* Primary (Blue) */
+	--color-primary: #3b82f6;
+	--color-primary-hover: #2563eb;
+	--color-primary-light: #dbeafe;
+	
+	/* Status */
+	--color-success: #10b981;
+	--color-success-light: #d1fae5;
+	
+	--color-danger: #ef4444;
+	--color-danger-light: #fee2e2;
+	
+	--color-warning: #f59e0b;
+	--color-warning-light: #fef3c7;
+	
+	--color-info: #3b82f6;
+	--color-info-light: #dbeafe;
+	
+	/* Fonts */
+	--font-family-base: 'Inter', system-ui, sans-serif;
+	--font-family-secondary: 'Montserrat', system-ui, sans-serif;
+	--font-family-mono: 'Fira Code', 'Consolas', monospace;
+	
+	/* Transitions */
+	--transition-duration: 0.2s;
+	--transition-easing: ease;
+	
+	/* Border */
+	--border-radius: #{rem(6)};
+	--border: #{rem(1)} solid var(--color-border);
+	--border-hover: #{rem(1)} solid var(--color-border-hover);
+	
+	/* Focus */
+	--focus-border: #{rem(2)} solid var(--color-primary);
+}

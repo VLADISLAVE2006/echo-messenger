@@ -1,0 +1,64 @@
+@use '../helpers' as h;
+
+/* Visibility */
+.visually-hidden {
+	@include h.visually-hidden;
+}
+
+.hidden-mobile {
+	@include h.mobile {
+		display: none !important;
+	}
+}
+
+.visible-mobile {
+	@include h.mobile-above {
+		display: none !important;
+	}
+}
+
+/* Modal state */
+.modal-opened {
+	overflow-y: hidden !important;
+}
+
+/* Required field indicator */
+.required {
+	position: relative;
+	padding-right: h.rem(7);
+	width: min-content;
+	
+	&::after {
+		content: '*';
+		position: absolute;
+		right: 0;
+		color: var(--color-danger);
+	}
+}
+
+/* Flex helpers */
+.flex {
+	display: flex;
+}
+
+.flex-center {
+	@include h.flex-center;
+}
+
+.flex-col {
+	display: flex;
+	flex-direction: column;
+}
+
+/* Text alignment */
+.text-center {
+	text-align: center;
+}
+
+.text-left {
+	text-align: left;
+}
+
+.text-right {
+	text-align: right;
+}
