@@ -1,45 +1,21 @@
-import sqlite3
-from flask import Flask, request, jsonify
+from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_cors import CORS
+from database import get_db
+import sqlite3
 
-app = Flask(__name__)
-CORS(app)  # разрешить все источники (для разработки)
-
-DATABASE = 'users.db'
-
-def get_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-def init_db():
-    with get_db() as conn:
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL
-            )
-        ''')
-        conn.commit()
-
-@app.before_request
-def before_first_request():
-    init_db()
+auth_bp = Blueprint('auth', __name__, url_prefix='/api')
 
 def authenticate(username, password):
     """Проверяет учетные данные и возвращает пользователя или None"""
     with get_db() as conn:
         user = conn.execute(
-            'SELECT * FROM users WHERE username = ?',
-            (username,)
+            'SELECT * FROM users WHERE username = ?', (username,)
         ).fetchone()
     if user and check_password_hash(user['password_hash'], password):
         return user
     return None
 
-@app.route('/api/register', methods=['POST'])
+@auth_bp.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
     if not data:
@@ -64,12 +40,12 @@ def register():
                 (username, password_hash)
             )
             conn.commit()
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError:  # нужно импортировать sqlite3 в начале или перехватывать конкретное исключение
         return jsonify({'error': 'Username already exists'}), 409
 
     return jsonify({'message': 'User created successfully'}), 201
 
-@app.route('/api/login', methods=['POST'])
+@auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     if not data:
@@ -87,12 +63,13 @@ def login():
     else:
         return jsonify({'error': 'Invalid username or password'}), 401
 
-@app.route('/api/logout', methods=['POST'])
+@auth_bp.route('/logout', methods=['POST'])
 def logout():
-    """Просто заглушка для выхода (клиент должен удалить локальные данные)"""
+    # В stateless API (JWT) этот эндпоинт может просто подтверждать выход на клиенте.
+    # Здесь оставляем как заглушку.
     return jsonify({'message': 'Logged out successfully'}), 200
 
-@app.route('/api/user/username', methods=['PUT'])
+@auth_bp.route('/user/username', methods=['PUT'])
 def change_username():
     data = request.get_json()
     if not data:
@@ -129,7 +106,7 @@ def change_username():
 
     return jsonify({'message': 'Username updated successfully'}), 200
 
-@app.route('/api/user/password', methods=['PUT'])
+@auth_bp.route('/user/password', methods=['PUT'])
 def change_password():
     data = request.get_json()
     if not data:
@@ -161,7 +138,7 @@ def change_password():
 
     return jsonify({'message': 'Password updated successfully'}), 200
 
-@app.route('/api/user', methods=['DELETE'])
+@auth_bp.route('/user', methods=['DELETE'])
 def delete_account():
     data = request.get_json()
     if not data:
@@ -184,6 +161,3 @@ def delete_account():
         conn.commit()
 
     return jsonify({'message': 'Account deleted successfully'}), 200
-
-if __name__ == '__main__':
-    app.run(debug=True)
