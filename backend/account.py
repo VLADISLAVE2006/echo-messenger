@@ -1,8 +1,11 @@
 import sqlite3
 from flask import Flask, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # разрешить все источники (для разработки)
+
 DATABASE = 'users.db'
 
 def get_db():
@@ -36,7 +39,7 @@ def authenticate(username, password):
         return user
     return None
 
-@app.route('/register', methods=['POST'])
+@app.route('/api/register', methods=['POST'])
 def register():
     data = request.get_json()
     if not data:
@@ -66,7 +69,7 @@ def register():
 
     return jsonify({'message': 'User created successfully'}), 201
 
-@app.route('/login', methods=['POST'])
+@app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
     if not data:
@@ -84,12 +87,12 @@ def login():
     else:
         return jsonify({'error': 'Invalid username or password'}), 401
 
-@app.route('/logout', methods=['POST'])
+@app.route('/api/logout', methods=['POST'])
 def logout():
     """Просто заглушка для выхода (клиент должен удалить локальные данные)"""
     return jsonify({'message': 'Logged out successfully'}), 200
 
-@app.route('/user/username', methods=['PUT'])
+@app.route('/api/user/username', methods=['PUT'])
 def change_username():
     data = request.get_json()
     if not data:
@@ -126,7 +129,7 @@ def change_username():
 
     return jsonify({'message': 'Username updated successfully'}), 200
 
-@app.route('/user/password', methods=['PUT'])
+@app.route('/api/user/password', methods=['PUT'])
 def change_password():
     data = request.get_json()
     if not data:
@@ -158,7 +161,7 @@ def change_password():
 
     return jsonify({'message': 'Password updated successfully'}), 200
 
-@app.route('/user', methods=['DELETE'])
+@app.route('/api/user', methods=['DELETE'])
 def delete_account():
     data = request.get_json()
     if not data:
