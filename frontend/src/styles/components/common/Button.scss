@@ -1,0 +1,55 @@
+@use '../../helpers' as h;
+
+.button {
+	@include h.flex-center;
+	
+	padding: var(--spacing-sm) var(--spacing-lg);
+	
+	font-family: var(--font-family-base), sans-serif;
+	font-size: h.rem(15);
+	font-weight: 600;
+	
+	border: none;
+	border-radius: var(--border-radius);
+	cursor: pointer;
+	
+	transition: all var(--transition-duration) var(--transition-easing);
+	
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+	
+	&--primary {
+		background-color: var(--color-primary);
+		color: var(--color-white);
+		
+		@include h.hover(false) {
+			background-color: var(--color-primary-hover);
+		}
+	}
+	
+	&--secondary {
+		background-color: var(--color-bg-hover);
+		color: var(--color-text-primary);
+		border: var(--border);
+		
+		@include h.hover(false) {
+			background-color: var(--color-bg-secondary);
+			border-color: var(--color-primary);
+		}
+	}
+	
+	&--danger {
+		background-color: var(--color-danger);
+		color: var(--color-white);
+		
+		@include h.hover(false) {
+			opacity: 0.9;
+		}
+	}
+	
+	&--full {
+		width: 100%;
+	}
+}

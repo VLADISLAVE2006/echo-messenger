@@ -38,6 +38,13 @@
 	--font-family-secondary: 'Montserrat', system-ui, sans-serif;
 	--font-family-mono: 'Fira Code', 'Consolas', monospace;
 	
+	/* Spacing */
+	--spacing-xs: #{rem(4)};
+	--spacing-sm: #{rem(8)};
+	--spacing-md: #{rem(16)};
+	--spacing-lg: #{rem(24)};
+	--spacing-xl: #{rem(32)};
+	
 	/* Transitions */
 	--transition-duration: 0.2s;
 	--transition-easing: ease;

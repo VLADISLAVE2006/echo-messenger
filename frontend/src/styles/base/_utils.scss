@@ -25,10 +25,13 @@
 /* Required field indicator */
 .required {
 	position: relative;
-	padding-right: h.rem(7);
+	padding-right: h.rem(8);
 	width: min-content;
 	
 	&::after {
+		display: inline;
+		margin-inline: auto;
+		
 		content: '*';
 		position: absolute;
 		right: 0;
