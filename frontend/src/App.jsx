@@ -3,7 +3,10 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './context/AuthContext'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import Teams from './pages/Teams'
+import Profile from './pages/Profile'
 import Workspace from './pages/Workspace'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
 	return (
@@ -11,12 +14,43 @@ function App() {
 			<AuthProvider>
 				<Routes>
 					<Route path="/login" element={<Login />} />
-					<Route path="/dashboard" element={<Dashboard />} />
-					<Route path="/workspace/:id" element={<Workspace />} />
-					<Route path="/" element={<Navigate to="/login" replace />} />
+					
+					<Route
+						path="/dashboard"
+						element={
+							<ProtectedRoute>
+								<Dashboard />
+							</ProtectedRoute>
+						}
+					/>
+					<Route
+						path="/teams"
+						element={
+							<ProtectedRoute>
+								<Teams />
+							</ProtectedRoute>
+						}
+					/>
+					<Route
+						path="/profile"
+						element={
+							<ProtectedRoute>
+								<Profile />
+							</ProtectedRoute>
+						}
+					/>
+					<Route
+						path="/workspace/:id"
+						element={
+							<ProtectedRoute>
+								<Workspace />
+							</ProtectedRoute>
+						}
+					/>
+					
+					<Route path="/" element={<Navigate to="/dashboard" replace />} />
 				</Routes>
 				
-				{/* Toast уведомления */}
 				<Toaster
 					position="top-right"
 					toastOptions={{

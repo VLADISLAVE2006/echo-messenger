@@ -1,0 +1,42 @@
+@use  '../helpers' as h;
+
+.teams {
+	padding: var(--spacing-xl) var(--spacing-lg);
+	
+	&__container {
+		max-width: h.rem(1200);
+		margin: 0 auto;
+	}
+	
+	&__header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: var(--spacing-xl);
+		
+		@include h.mobile {
+			flex-direction: column;
+			gap: var(--spacing-md);
+		}
+	}
+	
+	&__title {
+		margin: 0;
+		font-family: var(--font-family-secondary), sans-serif;
+		@include h.fluid-text(24, 32);
+		font-weight: 700;
+		color: var(--color-text-primary);
+	}
+	
+	&__content {
+		background-color: var(--color-white);
+		border: var(--border);
+		border-radius: var(--border-radius);
+		padding: var(--spacing-xl);
+		
+		p {
+			margin: 0;
+			color: var(--color-text-secondary);
+		}
+	}
+}

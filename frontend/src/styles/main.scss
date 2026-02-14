@@ -6,9 +6,16 @@
 @use 'base/globals';
 @use 'base/utils';
 
+// Layout
+@use 'layout/header';
+
 // Components
-@use 'components/common/Button';
-@use 'components/common/Input';
+@use 'components/common/button';
+@use 'components/common/input';
+@use 'components/common/modal';
 
 // Pages
 @use 'pages/Login';
+@use 'pages/Dashboard';
+@use 'pages/Teams';
+@use 'pages/Profile';

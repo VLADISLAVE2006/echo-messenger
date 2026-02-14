@@ -4,17 +4,20 @@ function Button({
 	                variant = 'primary',
 	                onClick,
 	                disabled = false,
-	                fullWidth = false
+	                fullWidth = false,
+	                as = 'button'
                 }) {
+	const Component = as
+	
 	return (
-		<button
+		<Component
 			type={type}
 			className={`button button--${variant} ${fullWidth ? 'button--full' : ''}`}
 			onClick={onClick}
 			disabled={disabled}
 		>
 			{children}
-		</button>
+		</Component>
 	)
 }
 

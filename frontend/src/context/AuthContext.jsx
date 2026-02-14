@@ -12,7 +12,11 @@ export function AuthProvider({ children }) {
 	useEffect(() => {
 		const savedUser = localStorage.getItem('user')
 		if (savedUser) {
-			setUser(JSON.parse(savedUser))
+			try {
+				setUser(JSON.parse(savedUser))
+			} catch (error) {
+				localStorage.removeItem('user')
+			}
 		}
 		setLoading(false)
 	}, [])
@@ -20,7 +24,11 @@ export function AuthProvider({ children }) {
 	const login = async (username, password) => {
 		try {
 			const data = await api.login(username, password)
-			const userData = { username }
+			const userData = {
+				username,
+				avatar: null,
+				bio: 'Добавьте описание о себе'
+			}
 			setUser(userData)
 			localStorage.setItem('user', JSON.stringify(userData))
 			navigate('/dashboard')
@@ -50,11 +58,18 @@ export function AuthProvider({ children }) {
 		}
 	}
 	
+	const updateUser = (data) => {
+		const updatedUser = { ...user, ...data }
+		setUser(updatedUser)
+		localStorage.setItem('user', JSON.stringify(updatedUser))
+	}
+	
 	const value = {
 		user,
 		login,
 		register,
 		logout,
+		updateUser,
 		isAuthenticated: !!user,
 	}
 	
