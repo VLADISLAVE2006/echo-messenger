@@ -1,0 +1,250 @@
+@use '../helpers' as h;
+
+.settings-modal {
+	display: flex;
+	flex-direction: column;
+	height: h.rem(600);
+	
+	&__tabs {
+		display: flex;
+		gap: var(--spacing-xs);
+		padding: var(--spacing-md);
+		background-color: var(--color-bg-secondary);
+		border-bottom: var(--border);
+		flex-shrink: 0;
+		
+		@include h.mobile {
+			overflow-x: auto;
+			
+			scrollbar-width: none;
+			-ms-overflow-style: none;
+			&::-webkit-scrollbar {
+				display: none;
+			}
+		}
+	}
+	
+	&__tab {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		padding: var(--spacing-sm) var(--spacing-lg);
+		background: none;
+		border: none;
+		border-radius: var(--border-radius);
+		font-size: h.rem(14);
+		font-weight: 500;
+		color: var(--color-text-secondary);
+		cursor: pointer;
+		transition: all var(--transition-duration) var(--transition-easing);
+		white-space: nowrap;
+		
+		@include h.hover(false) {
+			background-color: var(--color-white);
+			color: var(--color-text-primary);
+			transform: scale(1.03);
+		}
+		
+		&:active {
+			transform: scale(0.98);
+		}
+		
+		&--active {
+			background-color: var(--color-white);
+			color: var(--color-primary);
+			font-weight: 600;
+			box-shadow: 0 h.rem(2) h.rem(4) rgba(59, 130, 246, 0.1);
+		}
+		
+		// Красная вкладка для Delete Team
+		&--danger {
+			@include h.hover(false) {
+				background-color: #fef2f2;
+				color: #dc2626;
+			}
+			
+			&.settings-modal__tab--active {
+				background-color: #fef2f2;
+				color: #dc2626;
+				box-shadow: 0 h.rem(2) h.rem(4) rgba(220, 38, 38, 0.1);
+			}
+		}
+	}
+	
+	&__tab-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		
+		svg {
+			width: h.rem(16);
+			height: h.rem(16);
+		}
+	}
+	
+	&__tab-label {
+		@include h.mobile {
+			display: none;
+		}
+	}
+	
+	&__content {
+		flex: 1;
+		overflow-y: auto;
+		min-height: 0;
+		
+		// Скрываем scrollbar
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+		&::-webkit-scrollbar {
+			display: none;
+		}
+	}
+}
+
+.settings-content {
+	display: flex;
+	flex-direction: column;
+	padding: var(--spacing-lg);
+	
+	// Контент внутри вкладок
+	&__body {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-lg);
+		flex: 1;
+	}
+	
+	// Footer с кнопками (только для General)
+	&__footer {
+		display: flex;
+		gap: var(--spacing-sm);
+		justify-content: flex-end;
+		padding-top: var(--spacing-lg);
+		border-top: var(--border);
+		margin-top: var(--spacing-lg);
+		flex-shrink: 0;
+	}
+}
+
+.settings-section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-md);
+	
+	&__title {
+		margin: 0;
+		font-family: var(--font-family-secondary), sans-serif;
+		font-size: h.rem(18);
+		font-weight: 600;
+		color: var(--color-text-primary);
+	}
+	
+	&__description {
+		margin: 0;
+		font-size: h.rem(14);
+		color: var(--color-text-secondary);
+		line-height: 1.5;
+	}
+}
+
+.settings-placeholder {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: var(--spacing-xl);
+	text-align: center;
+	background-color: var(--color-bg-secondary);
+	border-radius: var(--border-radius);
+	
+	svg {
+		color: var(--color-text-muted);
+		margin-bottom: var(--spacing-md);
+	}
+	
+	p {
+		margin: 0;
+		font-size: h.rem(14);
+		color: var(--color-text-muted);
+	}
+}
+
+.settings-danger {
+	display: flex;
+	gap: var(--spacing-md);
+	padding: var(--spacing-lg);
+	background-color: #fef2f2;
+	border: h.rem(1) solid #fecaca;
+	border-radius: var(--border-radius);
+	
+	&__icon {
+		flex-shrink: 0;
+		width: h.rem(48);
+		height: h.rem(48);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: #fee2e2;
+		border-radius: 50%;
+		
+		svg {
+			color: #dc2626;
+		}
+	}
+	
+	&__content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-sm);
+	}
+	
+	&__title {
+		margin: 0;
+		font-family: var(--font-family-secondary), sans-serif;
+		font-size: h.rem(16);
+		font-weight: 600;
+		color: #dc2626;
+	}
+	
+	&__text {
+		margin: 0;
+		font-size: h.rem(14);
+		color: #991b1b;
+		line-height: 1.5;
+	}
+	
+	.button {
+		align-self: flex-start;
+		margin-top: var(--spacing-xs);
+	}
+}
+
+.checkbox-wrapper {
+	padding: var(--spacing-md);
+	background-color: var(--color-bg-secondary);
+	border-radius: var(--border-radius);
+}
+
+.checkbox-label {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+	font-size: h.rem(14);
+	color: var(--color-text-primary);
+	cursor: pointer;
+	
+	.checkbox-input {
+		width: h.rem(18);
+		height: h.rem(18);
+		cursor: pointer;
+		margin: 0;
+		accent-color: var(--color-primary);
+	}
+	
+	.checkbox-text {
+		user-select: none;
+	}
+}

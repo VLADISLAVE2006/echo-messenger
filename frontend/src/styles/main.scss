@@ -1,4 +1,7 @@
-@use 'sass:math';
+// Helpers
+@use 'helpers/variables';
+@use 'helpers/functions';
+@use 'helpers/mixins';
 
 // Base
 @use 'base/normalize';
@@ -10,12 +13,20 @@
 @use 'layout/header';
 
 // Components
-@use 'components/common/button';
-@use 'components/common/input';
-@use 'components/common/modal';
+@use 'components/common/Button';
+@use 'components/common/Input';
+@use 'components/common/Modal';
+@use 'components/ChatPanel';
+@use 'components/MembersList';
+@use 'components/SettingsModal';
+@use 'components/DeleteTeamModal';
+@use 'components/Placeholders';
+@use 'components/Loading';
+@use 'components/Widgets';
 
 // Pages
 @use 'pages/Login';
+@use 'pages/Profile';
 @use 'pages/Dashboard';
 @use 'pages/teams';
-@use 'pages/Profile';
+@use 'pages/TeamWorkspace';

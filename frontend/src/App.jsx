@@ -5,7 +5,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Teams from './pages/Teams'
 import Profile from './pages/Profile'
-import Workspace from './pages/Workspace'
+import TeamWorkspace from './pages/TeamWorkspace'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -32,18 +32,18 @@ function App() {
 						}
 					/>
 					<Route
-						path="/profile"
+						path="/teams/:teamId"
 						element={
 							<ProtectedRoute>
-								<Profile />
+								<TeamWorkspace />
 							</ProtectedRoute>
 						}
 					/>
 					<Route
-						path="/workspace/:id"
+						path="/profile"
 						element={
 							<ProtectedRoute>
-								<Workspace />
+								<Profile />
 							</ProtectedRoute>
 						}
 					/>

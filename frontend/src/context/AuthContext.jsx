@@ -31,6 +31,10 @@ export function AuthProvider({ children }) {
 			}
 			setUser(userData)
 			localStorage.setItem('user', JSON.stringify(userData))
+			
+			// ВАЖНО: Сохраняем пароль для API запросов
+			localStorage.setItem('password', password)
+			
 			navigate('/dashboard')
 			return { success: true }
 		} catch (error) {
@@ -52,6 +56,7 @@ export function AuthProvider({ children }) {
 			await api.logout()
 			setUser(null)
 			localStorage.removeItem('user')
+			localStorage.removeItem('password') // ВАЖНО: Удаляем пароль
 			navigate('/login')
 		} catch (error) {
 			console.error('Logout error:', error)

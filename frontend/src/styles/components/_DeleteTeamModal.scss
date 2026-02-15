@@ -1,0 +1,107 @@
+@use '../helpers' as h;
+
+.delete-team-modal {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-xl);
+	padding-inline: var(--spacing-lg);
+	
+	&__warning {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		padding: var(--spacing-xl);
+		background-color: #fef2f2;
+		border: h.rem(2) solid #fecaca;
+		border-radius: var(--border-radius);
+	}
+	
+	&__warning-icon {
+		width: h.rem(64);
+		height: h.rem(64);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: #fee2e2;
+		border-radius: 50%;
+		margin-bottom: var(--spacing-lg);
+		
+		svg {
+			color: #dc2626;
+		}
+	}
+	
+	&__warning-title {
+		margin: 0 0 var(--spacing-md) 0;
+		font-family: var(--font-family-secondary), sans-serif;
+		font-size: h.rem(20);
+		font-weight: 700;
+		color: #dc2626;
+	}
+	
+	&__warning-text {
+		margin: 0 0 var(--spacing-md) 0;
+		font-size: h.rem(14);
+		color: #991b1b;
+		line-height: 1.6;
+		
+		strong {
+			font-weight: 600;
+			color: #7f1d1d;
+		}
+	}
+	
+	&__warning-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		text-align: left;
+		width: 100%;
+		
+		li {
+			position: relative;
+			padding-left: var(--spacing-lg);
+			font-size: h.rem(13);
+			color: #991b1b;
+			line-height: 1.8;
+			
+			&::before {
+				content: '•';
+				position: absolute;
+				left: var(--spacing-sm);
+				color: #dc2626;
+				font-weight: 700;
+			}
+		}
+	}
+	
+	&__confirmation {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-md);
+	}
+	
+	&__confirmation-text {
+		margin: 0;
+		font-size: h.rem(14);
+		color: var(--color-text-primary);
+		line-height: 1.6;
+		
+		strong {
+			font-weight: 600;
+			color: var(--color-text-primary);
+			background-color: var(--color-bg-secondary);
+			padding: h.rem(2) var(--spacing-xs);
+			border-radius: h.rem(4);
+		}
+	}
+	
+	&__actions {
+		display: flex;
+		gap: var(--spacing-sm);
+		justify-content: flex-end;
+		padding-top: var(--spacing-md);
+		border-top: var(--border);
+	}
+}

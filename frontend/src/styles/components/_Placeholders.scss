@@ -1,0 +1,29 @@
+@use '../helpers' as h;
+
+.whiteboard-canvas,
+.tools-grid {
+	&__placeholder {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		height: 100%;
+		min-height: h.rem(400);
+		padding: var(--spacing-xl);
+		text-align: center;
+		
+		h2 {
+			margin: 0 0 var(--spacing-sm) 0;
+			font-family: var(--font-family-secondary), sans-serif;
+			font-size: h.rem(24);
+			font-weight: 600;
+			color: var(--color-text-primary);
+		}
+		
+		p {
+			margin: 0;
+			font-size: h.rem(14);
+			color: var(--color-text-muted);
+		}
+	}
+}
