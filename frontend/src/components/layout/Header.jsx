@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 function Header() {
 	const { user, logout } = useAuth()
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 	const dropdownRef = useRef(null)
 	const navigate = useNavigate()
 	
@@ -24,153 +25,240 @@ function Header() {
 		}
 	}, [isDropdownOpen])
 	
+	useEffect(() => {
+		if (isMobileMenuOpen) {
+			document.body.style.overflow = 'hidden'
+		} else {
+			document.body.style.overflow = ''
+		}
+		
+		return () => {
+			document.body.style.overflow = ''
+		}
+	}, [isMobileMenuOpen])
+	
 	const getAvatarLetter = () => {
 		return user?.username?.charAt(0).toUpperCase() || 'U'
 	}
 	
-	const handleProfileClick = () => {
-		setIsDropdownOpen(false)
-		navigate('/profile')
-	}
-	
 	const handleLogout = () => {
 		setIsDropdownOpen(false)
+		setIsMobileMenuOpen(false)
 		logout()
 	}
 	
+	const closeMobileMenu = () => {
+		setIsMobileMenuOpen(false)
+	}
+	
 	return (
-		<header className="header">
-			<div className="header__container">
-				<div className="header__logo">
-					<h1 className="header__title">Echo</h1>
-				</div>
-				
-				<nav className="header__nav">
-					<NavLink
-						to="/dashboard"
-						className={({ isActive }) =>
-							`header__link ${isActive ? 'header__link--active' : ''}`
-						}
-					>
-						Главная
-					</NavLink>
+		<>
+			<header className="header">
+				<div className="header__container">
+					<div className="header__logo">
+						<h1 className="header__title">Echo</h1>
+					</div>
 					
-					<NavLink
-						to="/teams"
-						className={({ isActive }) =>
-							`header__link ${isActive ? 'header__link--active' : ''}`
-						}
-					>
-						Команды
-					</NavLink>
-					
-					<NavLink
-						to="/profile"
-						className={({ isActive }) =>
-							`header__link ${isActive ? 'header__link--active' : ''}`
-						}
-					>
-						Профиль
-					</NavLink>
-				</nav>
-				
-				<div className="header__user" ref={dropdownRef}>
-					<button
-						className="header__profile-btn"
-						onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-					>
-						<div className="header__avatar">
-							{user?.avatar ? (
-								<img
-									src={user.avatar}
-									alt={user.username}
-									className="header__avatar-img"
-								/>
-							) : (
-								getAvatarLetter()
-							)}
-						</div>
-						<div className="header__user-info">
-							<span className="header__username">{user?.username}</span>
-							<span className="header__role">Участник</span>
-						</div>
-						<svg
-							className={`header__arrow ${isDropdownOpen ? 'header__arrow--open' : ''}`}
-							width="20"
-							height="20"
-							viewBox="0 0 20 20"
-							fill="none"
+					<nav className="header__nav">
+						<NavLink
+							to="/dashboard"
+							className={({ isActive }) =>
+								`header__link ${isActive ? 'header__link--active' : ''}`
+							}
 						>
-							<path
-								d="M5 7.5L10 12.5L15 7.5"
-								stroke="currentColor"
-								strokeWidth="2"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-						</svg>
-					</button>
+							Главная
+						</NavLink>
+						
+						<NavLink
+							to="/teams"
+							className={({ isActive }) =>
+								`header__link ${isActive ? 'header__link--active' : ''}`
+							}
+						>
+							Команды
+						</NavLink>
+						
+						<NavLink
+							to="/profile"
+							className={({ isActive }) =>
+								`header__link ${isActive ? 'header__link--active' : ''}`
+							}
+						>
+							Профиль
+						</NavLink>
+					</nav>
 					
-					{isDropdownOpen && (
-						<div className="header__dropdown">
-							<div className="header__dropdown-header">
-								<div className="header__dropdown-avatar">
+					<div className="header__actions">
+						<div className="header__user" ref={dropdownRef}>
+							<button
+								className="header__profile-btn"
+								onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+							>
+								<div className="header__avatar">
 									{user?.avatar ? (
 										<img
 											src={user.avatar}
 											alt={user.username}
-											className="header__dropdown-avatar-img"
+											className="header__avatar-img"
 										/>
 									) : (
-										<div className="header__dropdown-avatar-placeholder">
+										getAvatarLetter()
+									)}
+								</div>
+								<div className="header__user-info">
+									<span className="header__username">{user?.username}</span>
+									<span className="header__role">Участник</span>
+								</div>
+								<svg
+									className={`header__arrow ${isDropdownOpen ? 'header__arrow--open' : ''}`}
+									width="20"
+									height="20"
+									viewBox="0 0 20 20"
+									fill="none"
+								>
+									<path
+										d="M5 7.5L10 12.5L15 7.5"
+										stroke="currentColor"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+								</svg>
+							</button>
+							
+							{isDropdownOpen && (
+								<div className="header__dropdown">
+									<div className="header__dropdown-header">
+										<div className="header__dropdown-avatar">
+											{user?.avatar ? (
+												<img
+													src={user.avatar}
+													alt={user.username}
+													className="header__dropdown-avatar-img"
+												/>
+											) : (
+												<div className="header__dropdown-avatar-placeholder">
+													{getAvatarLetter()}
+												</div>
+											)}
+										</div>
+										<div className="header__dropdown-info">
+											<div className="header__dropdown-name">{user?.username}</div>
+											<div className="header__dropdown-email">Участник команды</div>
+										</div>
+									</div>
+									
+									<button
+										className="header__dropdown-item header__dropdown-item--danger"
+										onClick={handleLogout}
+									>
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+											<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+											<path d="M16 17l5-5-5-5"/>
+											<path d="M21 12H9"/>
+										</svg>
+										<span>Выйти</span>
+									</button>
+								</div>
+							)}
+						</div>
+						
+						<button
+							className="header__burger"
+							onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+							aria-label="Toggle menu"
+						>
+							<span className={`header__burger-line ${isMobileMenuOpen ? 'header__burger-line--open' : ''}`}></span>
+							<span className={`header__burger-line ${isMobileMenuOpen ? 'header__burger-line--open' : ''}`}></span>
+							<span className={`header__burger-line ${isMobileMenuOpen ? 'header__burger-line--open' : ''}`}></span>
+						</button>
+					</div>
+				</div>
+			</header>
+			
+			{isMobileMenuOpen && (
+				<div className="mobile-menu">
+					<div className="mobile-menu__overlay" onClick={closeMobileMenu}></div>
+					<div className="mobile-menu__content">
+						<div className="mobile-menu__header">
+							<div className="mobile-menu__user">
+								<div className="mobile-menu__avatar">
+									{user?.avatar ? (
+										<img
+											src={user.avatar}
+											alt={user.username}
+											className="mobile-menu__avatar-img"
+										/>
+									) : (
+										<div className="mobile-menu__avatar-placeholder">
 											{getAvatarLetter()}
 										</div>
 									)}
 								</div>
-								<div className="header__dropdown-info">
-									<div className="header__dropdown-name">{user?.username}</div>
-									<div className="header__dropdown-email">Участник команды</div>
+								<div className="mobile-menu__user-info">
+									<div className="mobile-menu__username">{user?.username}</div>
+									<div className="mobile-menu__role">Участник команды</div>
 								</div>
 							</div>
-							
-							<button
-								className="header__dropdown-item"
-								onClick={handleProfileClick}
+						</div>
+						
+						<nav className="mobile-menu__nav">
+							<NavLink
+								to="/dashboard"
+								className="mobile-menu__link"
+								onClick={closeMobileMenu}
 							>
-								<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-									<path
-										d="M10 10C12.7614 10 15 7.76142 15 5C15 2.23858 12.7614 0 10 0C7.23858 0 5 2.23858 5 5C5 7.76142 7.23858 10 10 10Z"
-										fill="currentColor"
-									/>
-									<path
-										d="M10 12C4.477 12 0 14.686 0 18V20H20V18C20 14.686 15.523 12 10 12Z"
-										fill="currentColor"
-									/>
+								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+									<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+									<polyline points="9 22 9 12 15 12 15 22"/>
 								</svg>
-								<span>Мой профиль</span>
-							</button>
+								<span>Главная</span>
+							</NavLink>
 							
+							<NavLink
+								to="/teams"
+								className="mobile-menu__link"
+								onClick={closeMobileMenu}
+							>
+								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+									<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+									<circle cx="9" cy="7" r="4"/>
+									<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+									<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+								</svg>
+								<span>Команды</span>
+							</NavLink>
+							
+							<NavLink
+								to="/profile"
+								className="mobile-menu__link"
+								onClick={closeMobileMenu}
+							>
+								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+									<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+									<circle cx="12" cy="7" r="4"/>
+								</svg>
+								<span>Профиль</span>
+							</NavLink>
+						</nav>
+						
+						<div className="mobile-menu__footer">
 							<button
-								className="header__dropdown-item header__dropdown-item--danger"
+								className="mobile-menu__logout"
 								onClick={handleLogout}
 							>
-								<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-									<path
-										d="M13 0H2C0.9 0 0 0.9 0 2V18C0 19.1 0.9 20 2 20H13C14.1 20 15 19.1 15 18V16H13V18H2V2H13V4H15V2C15 0.9 14.1 0 13 0Z"
-										fill="currentColor"
-									/>
-									<path
-										d="M19.6 9.4L16.6 6.4L15.2 7.8L16.4 9H8V11H16.4L15.2 12.2L16.6 13.6L19.6 10.6C20 10.2 20 9.8 19.6 9.4Z"
-										fill="currentColor"
-									/>
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+									<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+									<path d="M16 17l5-5-5-5"/>
+									<path d="M21 12H9"/>
 								</svg>
 								<span>Выйти</span>
 							</button>
 						</div>
-					)}
+					</div>
 				</div>
-			</div>
-		</header>
+			)}
+		</>
 	)
 }
 
