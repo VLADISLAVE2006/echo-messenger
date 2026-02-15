@@ -1,23 +1,103 @@
+import { useState } from 'react'
 import Layout from '../components/layout/Layout'
 import Button from '../components/common/Button'
+import Input from '../components/common/Input'
+import TeamCard from '../components/Teams/TeamCard'
+import CreateTeamModal from '../components/Teams/CreateTeamModal'
+import TeamDetailsModal from '../components/Teams/TeamDetailsModal'
 
 function Teams() {
+	const [searchQuery, setSearchQuery] = useState('')
+	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+	const [selectedTeam, setSelectedTeam] = useState(null)
+	const [teams, setTeams] = useState([])
+	
+	const filteredTeams = teams.filter(team =>
+		team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+		team.description.toLowerCase().includes(searchQuery.toLowerCase())
+	)
+	
+	const handleViewTeam = (team) => {
+		setSelectedTeam(team)
+	}
+	
+	const handleCreateTeam = (teamData) => {
+		const newTeam = {
+			id: Date.now(),
+			...teamData,
+			memberCount: 1,
+		}
+		setTeams([...teams, newTeam])
+		setIsCreateModalOpen(false)
+	}
+	
 	return (
 		<Layout>
 			<div className="teams">
 				<div className="teams__container">
 					<div className="teams__header">
 						<h2 className="teams__title">Команды</h2>
-						<Button variant="primary">
+						<Button
+							variant="primary"
+							onClick={() => setIsCreateModalOpen(true)}
+						>
 							Создать команду
 						</Button>
 					</div>
 					
-					<div className="teams__content">
-						<p>Здесь будет поиск и список команд</p>
+					<div className="teams__search">
+						<Input
+							type="text"
+							placeholder="Поиск команд..."
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+						/>
 					</div>
+					
+					{teams.length > 0 ? (
+						<div className="teams__grid">
+							{filteredTeams.length > 0 ? (
+								filteredTeams.map(team => (
+									<TeamCard
+										key={team.id}
+										team={team}
+										onView={handleViewTeam}
+									/>
+								))
+							) : (
+								<div className="teams__empty">
+									<p>Команды не найдены</p>
+								</div>
+							)}
+						</div>
+					) : (
+						<div className="teams__empty-state">
+							<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+								<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+								<circle cx="9" cy="7" r="4"/>
+								<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+								<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+							</svg>
+							<h3>Нет команд</h3>
+							<p>Создайте первую команду или найдите существующую</p>
+						</div>
+					)}
 				</div>
 			</div>
+			
+			{isCreateModalOpen && (
+				<CreateTeamModal
+					onClose={() => setIsCreateModalOpen(false)}
+					onCreate={handleCreateTeam}
+				/>
+			)}
+			
+			{selectedTeam && (
+				<TeamDetailsModal
+					team={selectedTeam}
+					onClose={() => setSelectedTeam(null)}
+				/>
+			)}
 		</Layout>
 	)
 }

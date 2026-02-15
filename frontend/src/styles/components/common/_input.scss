@@ -16,7 +16,6 @@
 		white-space: nowrap;
 	}
 	
-	// Контейнер для инпута и кнопки глаза
 	&-container {
 		position: relative;
 		width: 100%;
@@ -24,7 +23,7 @@
 	
 	width: 100%;
 	padding: var(--spacing-sm) var(--spacing-md);
-	padding-right: h.rem(40); // Место для иконки
+	padding-right: h.rem(40);
 	
 	font-family: var(--font-family-base), sans-serif;
 	font-size: h.rem(15);
@@ -53,7 +52,13 @@
 		}
 	}
 	
-	// Кнопка показа/скрытия пароля
+	&-helper {
+		margin-top: var(--spacing-xs);
+		font-size: h.rem(12);
+		color: var(--color-text-muted);
+		text-align: right;
+	}
+	
 	&-toggle-password {
 		position: absolute;
 		right: h.rem(8);

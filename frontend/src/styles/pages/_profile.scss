@@ -3,6 +3,11 @@
 .profile {
 	padding: var(--spacing-xl) var(--spacing-lg);
 	
+	&__container {
+		max-width: 75rem;
+		margin: 0 auto;
+	}
+	
 	&__header {
 		display: flex;
 		justify-content: space-between;
@@ -192,6 +197,11 @@
 			max-height: h.rem(100);
 			padding-inline: h.rem(170);
 			overflow-y: auto;
+			
+			@include h.mobile {
+				padding-inline: var(--spacing-md);
+				font-size: h.rem(14);
+			}
 		}
 	}
 }
