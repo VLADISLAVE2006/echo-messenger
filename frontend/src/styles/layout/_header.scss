@@ -9,9 +9,8 @@
 	z-index: 100;
 	
 	&__container {
-		max-width: h.rem(1440);
 		margin: 0 auto;
-		padding: var(--spacing-md) var(--spacing-lg);
+		padding: var(--spacing-md) var(--spacing-xl);
 		
 		display: flex;
 		align-items: center;

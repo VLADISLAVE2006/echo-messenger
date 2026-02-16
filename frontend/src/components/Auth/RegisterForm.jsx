@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import Button from '../common/Button'
 import Input from '../common/Input'
 
-function RegisterForm({ onSubmit, onSwitchToLogin }) {
+function RegisterForm({ onSwitchToLogin }) {
+	const { register } = useAuth()
 	const [formData, setFormData] = useState({
 		username: '',
 		password: '',
@@ -21,30 +23,22 @@ function RegisterForm({ onSubmit, onSwitchToLogin }) {
 	const handleSubmit = async (e) => {
 		e.preventDefault()
 		
-		if (!formData.username || !formData.password || !formData.password2) {
-			toast.error('Заполните все поля')
-			return
-		}
-		
 		if (formData.password !== formData.password2) {
-			toast.error('Пароли не совпадают')
-			return
-		}
-		
-		if (formData.password.length < 6) {
-			toast.error('Пароль должен быть не менее 6 символов')
+			toast.error('Passwords do not match')
 			return
 		}
 		
 		setLoading(true)
-		const result = await onSubmit(formData.username, formData.password, formData.password2)
-		setLoading(false)
 		
-		if (!result.success) {
-			toast.error(result.error || 'Ошибка регистрации')
+		const result = await register(formData.username, formData.password, formData.password2)
+		
+		if (result.success) {
+			toast.success('Registration successful!')
 		} else {
-			toast.success('Регистрация успешна!')
+			toast.error(result.error || 'Registration failed')
 		}
+		
+		setLoading(false)
 	}
 	
 	return (

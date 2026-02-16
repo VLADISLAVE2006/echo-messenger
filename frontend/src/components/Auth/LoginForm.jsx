@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import Button from '../common/Button'
 import Input from '../common/Input'
 
-function LoginForm({ onSubmit, onSwitchToRegister }) {
+function LoginForm({ onSwitchToRegister }) {
+	const { login } = useAuth()
 	const [formData, setFormData] = useState({
 		username: '',
 		password: '',
@@ -19,21 +21,17 @@ function LoginForm({ onSubmit, onSwitchToRegister }) {
 	
 	const handleSubmit = async (e) => {
 		e.preventDefault()
-		
-		if (!formData.username || !formData.password) {
-			toast.error('Заполните все поля')
-			return
-		}
-		
 		setLoading(true)
-		const result = await onSubmit(formData.username, formData.password)
-		setLoading(false)
 		
-		if (!result.success) {
-			toast.error(result.error || 'Ошибка входа')
+		const result = await login(formData.username, formData.password)
+		
+		if (result.success) {
+			toast.success('Login successful!')
 		} else {
-			toast.success('Вход выполнен успешно!')
+			toast.error(result.error || 'Login failed')
 		}
+		
+		setLoading(false)
 	}
 	
 	return (

@@ -23,6 +23,9 @@
 @use 'components/Placeholders';
 @use 'components/Loading';
 @use 'components/Widgets';
+@use 'components/TeamPoll';
+@use 'components/RemoveMemberModal';
+@use 'components/CreatePollModal';
 
 // Pages
 @use 'pages/Login';

@@ -18,6 +18,7 @@
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(h.rem(320), 1fr));
 		gap: var(--spacing-lg);
+		grid-auto-rows: 1fr; // ДОБАВИТЬ - все ряды одинаковой высоты
 		
 		@include h.mobile {
 			grid-template-columns: 1fr;
@@ -26,6 +27,7 @@
 	
 	&__widget {
 		position: relative;
+		display: flex; // ДОБАВИТЬ
 		
 		&--pinned {
 			.widget::before {
@@ -44,6 +46,8 @@
 	flex-direction: column;
 	transition: all var(--transition-duration) var(--transition-easing);
 	position: relative;
+	width: 100%; // ДОБАВИТЬ
+	height: auto;
 	
 	// Индикатор закрепленного виджета
 	&::before {
@@ -70,6 +74,7 @@
 		padding: var(--spacing-md) var(--spacing-lg);
 		border-bottom: var(--border);
 		background-color: var(--color-bg-secondary);
+		flex-shrink: 0; // ДОБАВИТЬ
 	}
 	
 	&__title {
@@ -148,6 +153,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--spacing-md);
+		min-height: 0; // ДОБАВИТЬ - для правильного overflow
 	}
 }
 
@@ -226,6 +232,12 @@
 // Timer Widget (Pomodoro + Countdown)
 .pomodoro-widget,
 .countdown-widget {
+	.widget__content {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between; // Разносим контент и кнопки
+	}
+	
 	&__modes {
 		display: flex;
 		gap: var(--spacing-xs);
@@ -262,6 +274,7 @@
 		align-items: center;
 		justify-content: center;
 		padding: var(--spacing-xl) 0;
+		flex: 1;
 	}
 	
 	&__circle {
@@ -321,185 +334,6 @@
 	}
 }
 
-// Poll Widget
-.poll-widget {
-	&__question {
-		font-family: var(--font-family-secondary), sans-serif;
-		font-size: h.rem(16);
-		font-weight: 600;
-		color: var(--color-text-primary);
-		margin-bottom: var(--spacing-xs);
-	}
-	
-	&__meta {
-		font-size: h.rem(12);
-		color: var(--color-text-muted);
-		margin-bottom: var(--spacing-md);
-	}
-	
-	&__results {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-sm);
-		margin-bottom: var(--spacing-md);
-	}
-	
-	&__option {
-		position: relative;
-		width: 100%;
-		padding: var(--spacing-md);
-		background-color: var(--color-bg-secondary);
-		border: h.rem(2) solid transparent;
-		border-radius: var(--border-radius);
-		cursor: pointer;
-		transition: all var(--transition-duration) var(--transition-easing);
-		overflow: hidden;
-		
-		@include h.hover(false) {
-			border-color: var(--color-primary);
-		}
-		
-		&--voted {
-			border-color: var(--color-primary);
-			background-color: var(--color-primary-light);
-		}
-		
-		&--disabled {
-			cursor: not-allowed;
-		}
-	}
-	
-	&__option-bar {
-		position: absolute;
-		top: 0;
-		left: 0;
-		height: 100%;
-		background: linear-gradient(90deg, var(--color-primary-light) 0%, transparent 100%);
-		transition: width 0.3s ease;
-	}
-	
-	&__option-content {
-		position: relative;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-	
-	&__option-text {
-		font-size: h.rem(14);
-		font-weight: 500;
-		color: var(--color-text-primary);
-	}
-	
-	&__option-percentage {
-		font-size: h.rem(14);
-		font-weight: 600;
-		color: var(--color-primary);
-	}
-	
-	&__empty {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		padding: var(--spacing-xl);
-		text-align: center;
-		
-		svg {
-			color: var(--color-text-muted);
-			margin-bottom: var(--spacing-md);
-		}
-		
-		p {
-			margin: 0 0 var(--spacing-md) 0;
-			font-size: h.rem(14);
-			color: var(--color-text-muted);
-		}
-	}
-	
-	&__options {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-sm);
-	}
-	
-	&__option-input {
-		display: flex;
-		gap: var(--spacing-sm);
-		align-items: flex-end;
-		
-		.input-wrapper {
-			flex: 1;
-		}
-	}
-	
-	&__remove-option {
-		width: h.rem(40);
-		height: h.rem(40);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: none;
-		border: none;
-		border-radius: var(--border-radius);
-		color: var(--color-danger);
-		cursor: pointer;
-		transition: all var(--transition-duration) var(--transition-easing);
-		flex-shrink: 0;
-		
-		@include h.hover(false) {
-			background-color: var(--color-danger-light);
-		}
-	}
-	
-	&__actions {
-		display: flex;
-		gap: var(--spacing-sm);
-		justify-content: flex-end;
-		padding-top: var(--spacing-md);
-		border-top: var(--border);
-	}
-}
-
-// Create Poll Widget
-.create-poll-widget {
-	&__options {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-sm);
-	}
-	
-	&__option-input {
-		display: flex;
-		gap: var(--spacing-sm);
-		align-items: flex-end;
-		
-		.input-wrapper {
-			flex: 1;
-		}
-	}
-	
-	&__remove-option {
-		width: h.rem(40);
-		height: h.rem(40);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: none;
-		border: none;
-		border-radius: var(--border-radius);
-		color: var(--color-danger);
-		cursor: pointer;
-		transition: all var(--transition-duration) var(--transition-easing);
-		flex-shrink: 0;
-		
-		@include h.hover(false) {
-			background-color: var(--color-danger-light);
-		}
-	}
-}
-
-// Todo Widget
 .todo-widget {
 	&__count {
 		font-size: h.rem(12);

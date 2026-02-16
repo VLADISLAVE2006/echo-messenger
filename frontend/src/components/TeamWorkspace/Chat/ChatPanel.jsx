@@ -1,82 +1,68 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../../context/AuthContext'
-import MessageList from './MessageList'
-import MessageInput from './MessageInput'
+import toast from 'react-hot-toast'
 
-function ChatPanel({ teamId }) {
+function ChatPanel({ teamId, teamData, chatId }) {
 	const { user } = useAuth()
 	const [messages, setMessages] = useState([])
-	const [loading, setLoading] = useState(true)
+	const [newMessage, setNewMessage] = useState('')
+	const [loading, setLoading] = useState(false)
+	const messagesEndRef = useRef(null)
 	
 	useEffect(() => {
-		fetchMessages()
-	}, [teamId])
+		if (chatId) {
+			fetchMessages()
+		}
+	}, [chatId])
+	
+	useEffect(() => {
+		scrollToBottom()
+	}, [messages])
+	
+	const scrollToBottom = () => {
+		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+	}
 	
 	const fetchMessages = async () => {
-		// ===== MOCK MESSAGES ДЛЯ ТЕСТОВОЙ КОМАНДЫ - УДАЛИТЬ ПОТОМ =====
-		if (teamId === '999') {
-			setTimeout(() => {
-				setMessages([
-					{
-						id: 1,
-						user_id: 2,
-						username: 'john_doe',
-						content: 'Hey everyone! Welcome to the team!',
-						created_at: new Date(Date.now() - 3600000).toISOString(),
-					},
-					{
-						id: 2,
-						user_id: user.id || 1,
-						username: user.username,
-						content: 'Thanks! Excited to be here!',
-						created_at: new Date(Date.now() - 1800000).toISOString(),
-					},
-					{
-						id: 3,
-						user_id: 3,
-						username: 'jane_smith',
-						content: "Let's get started on the project!",
-						created_at: new Date(Date.now() - 900000).toISOString(),
-					},
-				])
-				setLoading(false)
-			}, 300)
-			return
-		}
-		// ===== КОНЕЦ MOCK MESSAGES =====
+		if (!chatId) return
 		
 		try {
-			const response = await fetch(
-				`http://localhost:5000/api/messages?chat_id=${teamId}&username=${user.username}&password=${localStorage.getItem('password')}`
-			)
+			const password = localStorage.getItem('password')
+			
+			const params = new URLSearchParams({
+				username: user.username,
+				password: password,
+				chat_id: chatId,
+				limit: 50,
+				offset: 0,
+			})
+			
+			const response = await fetch(`http://localhost:5000/api/messages?${params}`, {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			})
 			
 			if (response.ok) {
 				const data = await response.json()
-				setMessages(data)
+				setMessages(data.reverse())
 			}
 		} catch (error) {
 			console.error('Error fetching messages:', error)
-		} finally {
-			setLoading(false)
 		}
 	}
 	
-	const handleSendMessage = async (content) => {
-		// ===== MOCK SEND ДЛЯ ТЕСТОВОЙ КОМАНДЫ - УДАЛИТЬ ПОТОМ =====
-		if (teamId === '999') {
-			const newMessage = {
-				id: messages.length + 1,
-				user_id: user.id || 1,
-				username: user.username,
-				content,
-				created_at: new Date().toISOString(),
-			}
-			setMessages([...messages, newMessage])
-			return
-		}
-		// ===== КОНЕЦ MOCK SEND =====
+	const handleSendMessage = async (e) => {
+		e.preventDefault()
+		
+		if (!newMessage.trim() || !chatId) return
+		
+		setLoading(true)
 		
 		try {
+			const password = localStorage.getItem('password')
+			
 			const response = await fetch('http://localhost:5000/api/messages', {
 				method: 'POST',
 				headers: {
@@ -84,18 +70,64 @@ function ChatPanel({ teamId }) {
 				},
 				body: JSON.stringify({
 					username: user.username,
-					password: localStorage.getItem('password'),
-					chat_id: teamId,
-					content,
+					password: password,
+					chat_id: chatId,
+					content: newMessage.trim(),
 				}),
 			})
 			
 			if (response.ok) {
-				fetchMessages()
+				const data = await response.json()
+				
+				const message = {
+					id: data.message_id,
+					user_id: user.id,
+					username: user.username,
+					content: newMessage.trim(),
+					created_at: new Date().toISOString(),
+				}
+				
+				setMessages([...messages, message])
+				setNewMessage('')
+			} else {
+				const error = await response.json()
+				toast.error(error.error || 'Failed to send message')
 			}
 		} catch (error) {
 			console.error('Error sending message:', error)
+			toast.error('Failed to send message')
+		} finally {
+			setLoading(false)
 		}
+	}
+	
+	const formatTime = (timestamp) => {
+		const date = new Date(timestamp)
+		return date.toLocaleTimeString('en-US', {
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false
+		})
+	}
+	
+	const getAvatarLetter = (username) => {
+		return username?.charAt(0).toUpperCase() || 'U'
+	}
+	
+	if (!chatId) {
+		return (
+			<div className="chat-panel">
+				<div className="chat-panel__header">
+					<h3 className="chat-panel__title">Chat</h3>
+				</div>
+				<div className="chat-panel__empty">
+					<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+						<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+					</svg>
+					<p>Chat not available</p>
+				</div>
+			</div>
+		)
 	}
 	
 	return (
@@ -104,9 +136,58 @@ function ChatPanel({ teamId }) {
 				<h3 className="chat-panel__title">Team Chat</h3>
 			</div>
 			
-			<MessageList messages={messages} loading={loading} currentUser={user} />
+			<div className="chat-panel__messages">
+				{messages.length === 0 ? (
+					<div className="chat-panel__empty">
+						<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+							<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+						</svg>
+						<p>No messages yet</p>
+						<span>Start the conversation!</span>
+					</div>
+				) : (
+					<>
+						{messages.map(message => (
+							<div key={message.id} className="chat-message">
+								<div className="chat-message__avatar">
+									<div className="chat-message__avatar-placeholder">
+										{getAvatarLetter(message.username)}
+									</div>
+								</div>
+								<div className="chat-message__content">
+									<div className="chat-message__header">
+										<span className="chat-message__author">{message.username}</span>
+										<span className="chat-message__time">{formatTime(message.created_at)}</span>
+									</div>
+									<p className="chat-message__text">{message.content}</p>
+								</div>
+							</div>
+						))}
+						<div ref={messagesEndRef} />
+					</>
+				)}
+			</div>
 			
-			<MessageInput onSend={handleSendMessage} />
+			<form className="chat-panel__input" onSubmit={handleSendMessage}>
+				<input
+					type="text"
+					value={newMessage}
+					onChange={(e) => setNewMessage(e.target.value)}
+					placeholder="Type a message..."
+					className="chat-panel__input-field"
+					disabled={loading}
+				/>
+				<button
+					type="submit"
+					className="chat-panel__send"
+					disabled={!newMessage.trim() || loading}
+				>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+						<line x1="22" y1="2" x2="11" y2="13"/>
+						<polygon points="22 2 15 22 11 13 2 9 22 2"/>
+					</svg>
+				</button>
+			</form>
 		</div>
 	)
 }

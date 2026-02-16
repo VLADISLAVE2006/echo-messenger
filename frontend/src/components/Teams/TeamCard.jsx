@@ -32,7 +32,7 @@ function TeamCard({ team, onView }) {
 								<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
 								<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
 							</svg>
-							<span>{team.memberCount}</span>
+							<span>{team.memberCount || 1}</span>
 						</div>
 						
 						{team.isPrivate && (

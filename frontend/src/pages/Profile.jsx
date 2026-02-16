@@ -31,15 +31,38 @@ function Profile() {
 	}
 	
 	const handleSaveProfile = (data) => {
-		setProfileData({ ...profileData, username: data.username, bio: data.bio })
-		updateUser({ ...profileData, username: data.username, bio: data.bio })
+		// Обновляем локальное состояние
+		const updatedProfile = {
+			...user,
+			username: data.username,
+			bio: data.bio,
+			avatar: user.avatar // Важно! Сохраняем текущий avatar
+		}
+		
+		setProfileData(updatedProfile)
+		
+		// localStorage уже обновлен в EditProfileModal
+		// Обновляем контекст
+		updateUser(updatedProfile)
+		
 		setIsEditModalOpen(false)
 	}
 	
 	const handleSaveAvatar = (avatar) => {
-		const updatedData = { ...profileData, avatar }
-		setProfileData(updatedData)
-		updateUser(updatedData)
+		// Обновляем локальное состояние
+		const updatedProfile = {
+			...user,
+			avatar: avatar,
+		}
+		
+		setProfileData(updatedProfile)
+		
+		// Обновляем localStorage
+		localStorage.setItem('user', JSON.stringify(updatedProfile))
+		
+		// Обновляем контекст
+		updateUser(updatedProfile)
+		
 		setIsAvatarModalOpen(false)
 	}
 	

@@ -23,16 +23,32 @@ export function AuthProvider({ children }) {
 	
 	const login = async (username, password) => {
 		try {
-			const data = await api.login(username, password)
-			const userData = {
-				username,
-				avatar: null,
-				bio: 'Добавьте описание о себе'
+			const response = await fetch('http://localhost:5000/api/login', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ username, password }),
+			})
+			
+			if (!response.ok) {
+				const error = await response.json()
+				throw new Error(error.error || 'Login failed')
 			}
+			
+			const data = await response.json()
+			
+			// Сохраняем ВСЕ данные от бэкенда
+			const userData = {
+				id: data.user.id,
+				username: data.user.username,
+				avatar: data.user.avatar || null,
+				bio: data.user.bio || 'Добавьте описание о себе',
+			}
+			
 			setUser(userData)
 			localStorage.setItem('user', JSON.stringify(userData))
-			
-			// ВАЖНО: Сохраняем пароль для API запросов
+			localStorage.setItem('username', username)
 			localStorage.setItem('password', password)
 			
 			navigate('/dashboard')
@@ -44,7 +60,20 @@ export function AuthProvider({ children }) {
 	
 	const register = async (username, password, password2) => {
 		try {
-			await api.register(username, password, password2)
+			const response = await fetch('http://localhost:5000/api/register', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ username, password, password2 }),
+			})
+			
+			if (!response.ok) {
+				const error = await response.json()
+				throw new Error(error.error || 'Registration failed')
+			}
+			
+			// После успешной регистрации сразу логиним
 			return await login(username, password)
 		} catch (error) {
 			return { success: false, error: error.message }
@@ -53,13 +82,20 @@ export function AuthProvider({ children }) {
 	
 	const logout = async () => {
 		try {
-			await api.logout()
-			setUser(null)
-			localStorage.removeItem('user')
-			localStorage.removeItem('password') // ВАЖНО: Удаляем пароль
-			navigate('/login')
+			await fetch('http://localhost:5000/api/logout', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			})
 		} catch (error) {
 			console.error('Logout error:', error)
+		} finally {
+			setUser(null)
+			localStorage.removeItem('user')
+			localStorage.removeItem('username')
+			localStorage.removeItem('password')
+			navigate('/login')
 		}
 	}
 	

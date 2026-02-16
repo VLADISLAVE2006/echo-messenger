@@ -2,7 +2,6 @@
 
 .dashboard {
 	padding: var(--spacing-xl) var(--spacing-lg);
-	min-height: calc(100vh - h.rem(64));
 	overflow-y: auto;
 	scrollbar-width: none;
 	-ms-overflow-style: none;

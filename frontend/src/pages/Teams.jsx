@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
 import Layout from '../components/layout/Layout'
 import Button from '../components/common/Button'
 import Input from '../components/common/Input'
@@ -7,14 +8,50 @@ import CreateTeamModal from '../components/Teams/CreateTeamModal'
 import TeamDetailsModal from '../components/Teams/TeamDetailsModal'
 
 function Teams() {
+	const { user } = useAuth()
 	const [searchQuery, setSearchQuery] = useState('')
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [selectedTeam, setSelectedTeam] = useState(null)
 	const [teams, setTeams] = useState([])
+	const [loading, setLoading] = useState(false)
+	
+	useEffect(() => {
+		loadTeams()
+	}, [])
+	
+	const loadTeams = async () => {
+		try {
+			const password = localStorage.getItem('password')
+			
+			if (!password) {
+				return
+			}
+			
+			// Передаем через query params для GET запроса
+			const params = new URLSearchParams({
+				username: user.username,
+				password: password,
+			})
+			
+			const response = await fetch(`http://localhost:5000/api/teams?${params}`, {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			})
+			
+			if (response.ok) {
+				const data = await response.json()
+				setTeams(data.teams || [])
+			}
+		} catch (error) {
+			console.error('Error loading teams:', error)
+		}
+	}
 	
 	const filteredTeams = teams.filter(team =>
 		team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-		team.description.toLowerCase().includes(searchQuery.toLowerCase())
+		(team.description || '').toLowerCase().includes(searchQuery.toLowerCase())
 	)
 	
 	const handleViewTeam = (team) => {
@@ -22,12 +59,7 @@ function Teams() {
 	}
 	
 	const handleCreateTeam = (teamData) => {
-		const newTeam = {
-			id: Date.now(),
-			...teamData,
-			memberCount: 1,
-		}
-		setTeams([...teams, newTeam])
+		loadTeams()
 		setIsCreateModalOpen(false)
 	}
 	
@@ -48,7 +80,7 @@ function Teams() {
 					<div className="teams__search">
 						<Input
 							type="text"
-							placeholder="Поиск команд..."
+							placeholder="Search teams..."
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 						/>
@@ -66,7 +98,7 @@ function Teams() {
 								))
 							) : (
 								<div className="teams__empty">
-									<p>Команды не найдены</p>
+									<p>No teams found</p>
 								</div>
 							)}
 						</div>
@@ -78,8 +110,8 @@ function Teams() {
 								<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
 								<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
 							</svg>
-							<h3>Нет команд</h3>
-							<p>Создайте первую команду или найдите существующую</p>
+							<h3>No teams</h3>
+							<p>Create your first team or find an existing one</p>
 						</div>
 					)}
 				</div>

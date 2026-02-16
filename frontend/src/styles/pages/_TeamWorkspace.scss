@@ -51,6 +51,7 @@
 	
 	&__title {
 		margin: 0;
+		line-height: 1;
 		font-family: var(--font-family-secondary), sans-serif;
 		font-size: h.rem(20);
 		font-weight: 700;
@@ -90,6 +91,7 @@
 	
 	&__tabs {
 		display: flex;
+		justify-content: center; // ЦЕНТРИРУЕМ
 		gap: var(--spacing-xs);
 		padding: var(--spacing-md) var(--spacing-lg);
 		background-color: var(--color-white);
@@ -119,6 +121,7 @@
 			
 			@include h.hover(false) {
 				background-color: var(--color-primary-hover);
+				color: var(--color-white); // БЕЛЫЙ ТЕКСТ ПРИ ХОВЕРЕ
 			}
 		}
 	}
@@ -148,5 +151,19 @@
 		@include h.mobile {
 			display: none;
 		}
+	}
+}
+
+.team-workspace-loading {
+	height: 100vh;
+	width: 100vw;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: var(--color-bg-primary);
+	
+	.loading-overlay {
+		min-height: 100vh;
+		width: 100%;
 	}
 }

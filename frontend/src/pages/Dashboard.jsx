@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/layout/Layout'
 import Button from '../components/common/Button'
@@ -7,69 +7,50 @@ import Loading from '../components/common/Loading'
 
 function Dashboard() {
 	const navigate = useNavigate()
+	const location = useLocation()
 	const { user } = useAuth()
 	const [teams, setTeams] = useState([])
-	const [loading, setLoading] = useState(true)
+	const [loading, setLoading] = useState(location.state?.fromTeamWorkspace || false)
 	
 	useEffect(() => {
+		if (location.state?.fromTeamWorkspace) {
+			window.history.replaceState({}, document.title)
+		}
+		
 		loadTeams()
 	}, [])
 	
-	const loadTeams = () => {
-		// ===== ТЕСТОВЫЕ ДАННЫЕ - пока нет бэкенда для команд =====
-		setTimeout(() => {
-			const testTeam = {
-				id: 999,
-				name: 'Test Team',
-				description: 'This is a test team for development. Remove this later!',
-				is_private: false,
-				avatar: null,
-				member_count: 3,
-			}
-			
-			setTeams([testTeam])
-			setLoading(false)
-		}, 300) // Имитация загрузки
-		// ===== КОНЕЦ ТЕСТОВЫХ ДАННЫХ =====
-		
-		/*
-		===== РАСКОММЕНТИРУЙ КОГДА БЭКЕНД ДОБАВИТ /api/teams =====
-		
-		const fetchTeams = async () => {
+	const loadTeams = async () => {
+		try {
 			const password = localStorage.getItem('password')
 			
 			if (!password) {
-				console.warn('No password in localStorage')
 				setLoading(false)
 				return
 			}
-
-			try {
-				const params = new URLSearchParams({
-					username: user.username,
-					password: password,
-				})
-
-				const response = await fetch(`http://localhost:5000/api/teams?${params}`, {
-					method: 'GET',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-				})
-
-				if (response.ok) {
-					const data = await response.json()
-					setTeams(data.teams || [])
-				}
-			} catch (error) {
-				console.error('Error fetching teams:', error)
-			} finally {
-				setLoading(false)
+			
+			// Передаем через query params для GET запроса
+			const params = new URLSearchParams({
+				username: user.username,
+				password: password,
+			})
+			
+			const response = await fetch(`http://localhost:5000/api/teams?${params}`, {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			})
+			
+			if (response.ok) {
+				const data = await response.json()
+				setTeams(data.teams || [])
 			}
+		} catch (error) {
+			console.error('Error loading teams:', error)
+		} finally {
+			setLoading(false)
 		}
-		
-		fetchTeams()
-		*/
 	}
 	
 	const handleTeamClick = (teamId) => {
@@ -93,7 +74,7 @@ function Dashboard() {
 			<div className="dashboard">
 				<div className="dashboard__container">
 					<div className="dashboard__header">
-						<h1 className="dashboard__title">My Teams</h1>
+						<h1 className="dashboard__title">Мои команды</h1>
 					</div>
 					
 					{teams.length === 0 ? (
@@ -104,8 +85,8 @@ function Dashboard() {
 								<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
 								<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
 							</svg>
-							<h3>No teams yet</h3>
-							<p>Join or create a team to get started</p>
+							<h3>Список команд пуст</h3>
+							<p>Создай или присоединись к команде</p>
 						</div>
 					) : (
 						<div className="dashboard__grid">
@@ -143,13 +124,13 @@ function Dashboard() {
 													<span>{team.member_count}</span>
 												</div>
 												
-												{team.is_private && (
+												{team.is_private === 1 && (
 													<div className="dashboard-card__badge">
 														<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 															<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
 															<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
 														</svg>
-														<span>Приватная</span>
+														<span>Private</span>
 													</div>
 												)}
 											</div>
