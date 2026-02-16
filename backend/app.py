@@ -9,14 +9,14 @@ from message_routes import message_bp
 from team_routes import team_bp
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # замените на случайную строку в продакшене
+app.secret_key = 'your-secret-key-here'  # замените на случайную строку
 app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=48)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False  # В продакшене с HTTPS установите True
+app.config['SESSION_COOKIE_SECURE'] = False  # в продакшене с HTTPS установите True
 
 # Настройка CORS для работы с куками (credentials)
-CORS(app, supports_credentials=True, origins=['http://localhost:3000'])  # укажите ваш фронтенд-домен
+CORS(app, supports_credentials=True, origins=['http://localhost:3000'])
 
 # Инициализация базы данных
 init_db()

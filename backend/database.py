@@ -5,7 +5,7 @@ DATABASE = 'messenger.db'
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")  # важно для каскадного удаления
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 def init_db():
@@ -18,6 +18,7 @@ def init_db():
                 password_hash TEXT NOT NULL,
                 avatar TEXT,
                 bio TEXT DEFAULT 'Добавьте описание о себе',
+                last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
@@ -26,9 +27,13 @@ def init_db():
         try:
             conn.execute('ALTER TABLE users ADD COLUMN avatar TEXT')
         except sqlite3.OperationalError:
-            pass  # колонка уже существует
+            pass
         try:
             conn.execute('ALTER TABLE users ADD COLUMN bio TEXT DEFAULT "Добавьте описание о себе"')
+        except sqlite3.OperationalError:
+            pass
+        try:
+            conn.execute('ALTER TABLE users ADD COLUMN last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
         except sqlite3.OperationalError:
             pass
 
@@ -72,7 +77,7 @@ def init_db():
             )
         ''')
 
-        # ---- Новые таблицы для команд ----
+        # Таблицы для команд
         conn.execute('''
             CREATE TABLE IF NOT EXISTS teams (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
