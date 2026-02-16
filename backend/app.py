@@ -15,13 +15,10 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=48)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False  # в продакшене с HTTPS установите True
 
-# Настройка CORS для работы с куками (credentials)
 CORS(app, supports_credentials=True, origins=['http://localhost:3000'])
 
-# Инициализация базы данных
 init_db()
 
-# Регистрация blueprint'ов
 app.register_blueprint(auth_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(message_bp)

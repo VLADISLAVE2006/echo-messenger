@@ -23,7 +23,7 @@ def init_db():
             )
         ''')
 
-        # Добавление новых полей в существующую таблицу users (если их нет)
+        # Добавление новых полей в users, если их нет
         try:
             conn.execute('ALTER TABLE users ADD COLUMN avatar TEXT')
         except sqlite3.OperationalError:
@@ -87,9 +87,17 @@ def init_db():
                 avatar TEXT,
                 created_by INTEGER NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (created_by) REFERENCES users(id)
+                chat_id INTEGER,
+                FOREIGN KEY (created_by) REFERENCES users(id),
+                FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE SET NULL
             )
         ''')
+
+        # Добавление поля chat_id в teams, если его нет
+        try:
+            conn.execute('ALTER TABLE teams ADD COLUMN chat_id INTEGER')
+        except sqlite3.OperationalError:
+            pass
 
         conn.execute('''
             CREATE TABLE IF NOT EXISTS team_members (

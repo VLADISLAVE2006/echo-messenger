@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 
 team_bp = Blueprint('team', __name__, url_prefix='/api')
 
-# Вспомогательная функция для проверки, является ли пользователь создателем команды
 def is_team_creator(conn, team_id, user_id):
     team = conn.execute(
         'SELECT created_by FROM teams WHERE id = ?', (team_id,)
@@ -15,7 +14,6 @@ def is_team_creator(conn, team_id, user_id):
 
 @team_bp.route('/teams', methods=['GET'])
 def get_teams():
-    # Получаем параметры из query string
     username = request.args.get('username')
     password = request.args.get('password')
 
@@ -75,13 +73,27 @@ def create_team():
             return jsonify({'error': 'Invalid avatar data'}), 400
 
     with get_db() as conn:
+        # 1. Создаём чат для команды
+        chat_cur = conn.execute(
+            'INSERT INTO chats (name, type, created_by) VALUES (?, ?, ?)',
+            (f'{name} Chat', 'group', user['id'])
+        )
+        chat_id = chat_cur.lastrowid
+
+        # Добавляем создателя в чат
+        conn.execute(
+            'INSERT INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)',
+            (chat_id, user['id'], 'admin')
+        )
+
+        # 2. Создаём команду с указанием chat_id
         cur = conn.execute(
-            'INSERT INTO teams (name, description, is_private, avatar, created_by) VALUES (?, ?, ?, ?, ?)',
-            (name, description, 1 if is_private else 0, avatar, user['id'])
+            'INSERT INTO teams (name, description, is_private, avatar, created_by, chat_id) VALUES (?, ?, ?, ?, ?, ?)',
+            (name, description, 1 if is_private else 0, avatar, user['id'], chat_id)
         )
         team_id = cur.lastrowid
 
-        # Добавляем создателя как участника
+        # Добавляем создателя в участники команды
         conn.execute(
             'INSERT INTO team_members (team_id, user_id) VALUES (?, ?)',
             (team_id, user['id'])
@@ -97,7 +109,8 @@ def create_team():
 
     return jsonify({
         'message': 'Team created successfully',
-        'team_id': team_id
+        'team_id': team_id,
+        'chat_id': chat_id
     }), 200
 
 @team_bp.route('/teams/<int:team_id>', methods=['GET'])
@@ -140,12 +153,10 @@ def get_team(team_id):
                 (team_id, member['id'])
             ).fetchall()
 
-            # Определяем онлайн-статус: если last_seen был менее 5 минут назад
             last_seen = member['last_seen']
             is_online = False
             if last_seen:
                 try:
-                    # last_seen может быть строкой, преобразуем
                     if isinstance(last_seen, str):
                         last_seen_dt = datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
                     else:
@@ -216,8 +227,7 @@ def join_team_request(team_id):
 
     return jsonify({'message': 'Request sent successfully'}), 200
 
-# ----- Новые эндпоинты -----
-
+# ----- Удаление участника из команды -----
 @team_bp.route('/teams/<int:team_id>/members/<int:user_id>', methods=['DELETE'])
 def remove_team_member(team_id, user_id):
     data = request.get_json()
@@ -232,23 +242,35 @@ def remove_team_member(team_id, user_id):
         return jsonify({'error': 'Invalid credentials'}), 401
 
     with get_db() as conn:
-        # Проверяем, что текущий пользователь — создатель команды
         if not is_team_creator(conn, team_id, user['id']):
             return jsonify({'error': 'Only team creator can remove members'}), 403
 
-        # Нельзя удалить самого создателя
         if user_id == user['id']:
             return jsonify({'error': 'Cannot remove team creator'}), 400
 
-        # Удаляем участника из team_members (каскадно удалятся роли)
+        # Получаем chat_id команды
+        team = conn.execute(
+            'SELECT chat_id FROM teams WHERE id = ?', (team_id,)
+        ).fetchone()
+
+        # Удаляем из team_members (каскадно удалятся роли)
         conn.execute(
             'DELETE FROM team_members WHERE team_id = ? AND user_id = ?',
             (team_id, user_id)
         )
+
+        # Удаляем из чата команды, если он существует
+        if team and team['chat_id']:
+            conn.execute(
+                'DELETE FROM chat_members WHERE chat_id = ? AND user_id = ?',
+                (team['chat_id'], user_id)
+            )
+
         conn.commit()
 
     return jsonify({'message': 'Member removed successfully'}), 200
 
+# ----- Обновление команды -----
 @team_bp.route('/teams/<int:team_id>', methods=['PUT'])
 def update_team(team_id):
     data = request.get_json()
@@ -273,18 +295,15 @@ def update_team(team_id):
         if not is_team_creator(conn, team_id, user['id']):
             return jsonify({'error': 'Only team creator can update team'}), 403
 
-        # Проверяем существование команды
         team = conn.execute(
             'SELECT * FROM teams WHERE id = ?', (team_id,)
         ).fetchone()
         if not team:
             return jsonify({'error': 'Team not found'}), 404
 
-        # Валидация description
         if description is not None and len(description) > 80:
             return jsonify({'error': 'Description must be less than 80 characters'}), 400
 
-        # Валидация avatar
         if avatar:
             try:
                 if avatar.startswith('data:image'):
@@ -300,7 +319,6 @@ def update_team(team_id):
             except Exception:
                 return jsonify({'error': 'Invalid avatar data'}), 400
 
-        # Формируем запрос на обновление только переданных полей
         updates = []
         values = []
         if name is not None:
@@ -326,6 +344,7 @@ def update_team(team_id):
 
     return jsonify({'message': 'Team updated successfully'}), 200
 
+# ----- Удаление команды -----
 @team_bp.route('/teams/<int:team_id>', methods=['DELETE'])
 def delete_team(team_id):
     data = request.get_json()
@@ -343,14 +362,13 @@ def delete_team(team_id):
         if not is_team_creator(conn, team_id, user['id']):
             return jsonify({'error': 'Only team creator can delete team'}), 403
 
-        # Проверяем существование команды
         team = conn.execute(
             'SELECT id FROM teams WHERE id = ?', (team_id,)
         ).fetchone()
         if not team:
             return jsonify({'error': 'Team not found'}), 404
 
-        # Благодаря ON DELETE CASCADE связанные записи удалятся автоматически
+        # Удаляем команду (все связанные записи удалятся каскадно)
         conn.execute('DELETE FROM teams WHERE id = ?', (team_id,))
         conn.commit()
 

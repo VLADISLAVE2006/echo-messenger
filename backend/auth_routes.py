@@ -14,7 +14,6 @@ def authenticate(username, password):
             'SELECT * FROM users WHERE username = ?', (username,)
         ).fetchone()
     if user and check_password_hash(user['password_hash'], password):
-        # Обновляем время последней активности
         with get_db() as conn:
             conn.execute(
                 'UPDATE users SET last_seen = ? WHERE id = ?',
