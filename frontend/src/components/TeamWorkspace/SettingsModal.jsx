@@ -34,7 +34,7 @@ function SettingsModal({ team, onClose, onUpdate }) {
 		const file = e.target.files[0]
 		if (file) {
 			if (file.size > 5 * 1024 * 1024) {
-				toast.error('File too large. Maximum 5MB')
+				toast.error('Файл весит слишком много! Максимальный размер файла - 5МБ')
 				return
 			}
 			
@@ -54,17 +54,17 @@ function SettingsModal({ team, onClose, onUpdate }) {
 	
 	const handleSave = async () => {
 		if (!isCreator) {
-			toast.error('Only team creator can update settings')
+			toast.error('Только администратор команды может изменять ее настройки')
 			return
 		}
 		
 		if (!formData.name.trim()) {
-			toast.error('Team name is required')
+			toast.error('Необходимо ввести название команды')
 			return
 		}
 		
 		if (formData.description.length > 80) {
-			toast.error('Description must be less than 80 characters')
+			toast.error('Описание должно содержать не более 80 символов')
 			return
 		}
 		
@@ -89,16 +89,16 @@ function SettingsModal({ team, onClose, onUpdate }) {
 			})
 			
 			if (response.ok) {
-				toast.success('Team updated successfully!')
+				toast.success('Команда обновлена успешно!')
 				onUpdate()
 				onClose()
 			} else {
 				const error = await response.json()
-				toast.error(error.error || 'Failed to update team')
+				toast.error(error.error || 'Произошла ошибка в обновлении команды')
 			}
 		} catch (error) {
 			console.error('Error updating team:', error)
-			toast.error('Failed to update team')
+			toast.error('Произошла ошибка в обновлении команды')
 		} finally {
 			setLoading(false)
 		}
@@ -106,7 +106,7 @@ function SettingsModal({ team, onClose, onUpdate }) {
 	
 	const handleDeleteClick = () => {
 		if (!isCreator) {
-			toast.error('Only team creator can delete team')
+			toast.error('Только администратор может удалить команду!')
 			return
 		}
 		setIsDeleteModalOpen(true)

@@ -26,9 +26,9 @@ function LoginForm({ onSwitchToRegister }) {
 		const result = await login(formData.username, formData.password)
 		
 		if (result.success) {
-			toast.success('Login successful!')
+			toast.success('Вход выполнен!')
 		} else {
-			toast.error(result.error || 'Login failed')
+			toast.error(result.error || 'Ошибка входа')
 		}
 		
 		setLoading(false)

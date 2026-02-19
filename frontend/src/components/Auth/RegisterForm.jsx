@@ -24,7 +24,7 @@ function RegisterForm({ onSwitchToLogin }) {
 		e.preventDefault()
 		
 		if (formData.password !== formData.password2) {
-			toast.error('Passwords do not match')
+			toast.error('Пароли не совпадают!')
 			return
 		}
 		
@@ -33,9 +33,9 @@ function RegisterForm({ onSwitchToLogin }) {
 		const result = await register(formData.username, formData.password, formData.password2)
 		
 		if (result.success) {
-			toast.success('Registration successful!')
+			toast.success('Регистрация прошла успешно!')
 		} else {
-			toast.error(result.error || 'Registration failed')
+			toast.error(result.error || 'Ошибка регистрации')
 		}
 		
 		setLoading(false)
