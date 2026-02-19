@@ -1,12 +1,49 @@
-import { useState } from 'react'
-import toast from 'react-hot-toast'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import toast from 'react-hot-toast'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 
 function TeamDetailsModal({ team, onClose }) {
 	const { user } = useAuth()
 	const [loading, setLoading] = useState(false)
+	const [members, setMembers] = useState([])
+	const [teamDetails, setTeamDetails] = useState(null)
+	
+	useEffect(() => {
+		loadTeamDetails()
+	}, [team.id])
+	
+	const loadTeamDetails = async () => {
+		try {
+			const password = localStorage.getItem('password')
+			
+			const params = new URLSearchParams({
+				username: user.username,
+				password: password,
+			})
+			
+			console.log('Loading team details for team:', team.id)
+			
+			const response = await fetch(`http://localhost:5000/api/teams/${team.id}?${params}`, {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			})
+			
+			if (response.ok) {
+				const data = await response.json()
+				console.log('Team details loaded:', data)
+				setTeamDetails(data.team)
+				setMembers(data.members || [])
+			} else {
+				console.error('Failed to load team details:', response.status)
+			}
+		} catch (error) {
+			console.error('Error loading team details:', error)
+		}
+	}
 	
 	const handleJoinRequest = async () => {
 		setLoading(true)
@@ -41,14 +78,14 @@ function TeamDetailsModal({ team, onClose }) {
 	}
 	
 	const getAvatarLetter = (username) => {
-		return username.charAt(0).toUpperCase()
+		return username?.charAt(0).toUpperCase() || 'U'
 	}
 	
 	const getTeamLetter = () => {
 		return team.name.charAt(0).toUpperCase()
 	}
 	
-	const memberCount = team.member_count || 1
+	const memberCount = teamDetails?.member_count || members.length || team.member_count || 1
 	
 	return (
 		<Modal title={team.name} onClose={onClose}>
@@ -94,6 +131,35 @@ function TeamDetailsModal({ team, onClose }) {
 						</div>
 					</div>
 				</div>
+				
+				{members.length > 0 && (
+					<div className="team-details__members">
+						<h4 className="team-details__members-title">Members</h4>
+						<div className="team-details__members-list">
+							{members.map(member => (
+								<div key={member.id} className="team-details__member">
+									<div className="team-details__member-avatar">
+										{member.avatar ? (
+											<img src={member.avatar} alt={member.username} />
+										) : (
+											<div className="team-details__member-avatar-placeholder">
+												{getAvatarLetter(member.username)}
+											</div>
+										)}
+									</div>
+									<div className="team-details__member-info">
+										<p className="team-details__member-name">{member.username}</p>
+										{member.roles && member.roles.length > 0 && (
+											<span className="team-details__member-role">
+                        {member.roles.join(', ')}
+                      </span>
+										)}
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+				)}
 				
 				<div className="modal__actions">
 					<Button type="button" variant="secondary" onClick={onClose}>

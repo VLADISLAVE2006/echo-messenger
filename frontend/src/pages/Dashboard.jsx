@@ -29,7 +29,6 @@ function Dashboard() {
 				return
 			}
 			
-			// Передаем через query params для GET запроса
 			const params = new URLSearchParams({
 				username: user.username,
 				password: password,
@@ -44,7 +43,51 @@ function Dashboard() {
 			
 			if (response.ok) {
 				const data = await response.json()
-				setTeams(data.teams || [])
+				
+				// Загружаем участников для каждой команды
+				const teamsWithMembers = await Promise.all(
+					(data.teams || []).map(async (team) => {
+						try {
+							const teamParams = new URLSearchParams({
+								username: user.username,
+								password: password,
+							})
+							
+							const teamResponse = await fetch(`http://localhost:5000/api/teams/${team.id}?${teamParams}`, {
+								method: 'GET',
+								headers: {
+									'Content-Type': 'application/json',
+								},
+							})
+							
+							if (teamResponse.ok) {
+								const teamData = await teamResponse.json()
+								return {
+									...team,
+									members: teamData.members || [],
+								}
+							}
+						} catch (error) {
+							console.error(`Error loading team ${team.id}:`, error)
+						}
+						return null
+					})
+				)
+				
+				// Фильтруем только команды где пользователь является участником
+				const userTeams = teamsWithMembers.filter(team => {
+					if (!team) return false
+					
+					if (team.members && team.members.length > 0) {
+						return team.members.some(member =>
+							member.username === user.username || member.id === user.id
+						)
+					}
+					
+					return team.created_by === user.id
+				})
+				
+				setTeams(userTeams)
 			}
 		} catch (error) {
 			console.error('Error loading teams:', error)

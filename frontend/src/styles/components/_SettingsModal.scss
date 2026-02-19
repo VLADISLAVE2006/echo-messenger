@@ -3,238 +3,108 @@
 .settings-modal {
 	display: flex;
 	flex-direction: column;
-	height: h.rem(600);
+	gap: h.rem(24);
 	
-	&__tabs {
-		display: flex;
-		gap: var(--spacing-xs);
-		padding: var(--spacing-md);
-		background-color: var(--color-bg-secondary);
-		border-bottom: var(--border);
-		flex-shrink: 0;
-		
-		@include h.mobile {
-			overflow-x: auto;
-			
-			scrollbar-width: none;
-			-ms-overflow-style: none;
-			&::-webkit-scrollbar {
-				display: none;
-			}
-		}
-	}
-	
-	&__tab {
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-xs);
-		padding: var(--spacing-sm) var(--spacing-lg);
-		background: none;
-		border: none;
-		border-radius: var(--border-radius);
-		font-size: h.rem(14);
-		font-weight: 500;
-		color: var(--color-text-secondary);
-		cursor: pointer;
-		transition: all var(--transition-duration) var(--transition-easing);
-		white-space: nowrap;
-		
-		@include h.hover(false) {
-			background-color: var(--color-white);
-			color: var(--color-text-primary);
-			transform: scale(1.03);
-		}
-		
-		&:active {
-			transform: scale(0.98);
-		}
-		
-		&--active {
-			background-color: var(--color-white);
-			color: var(--color-primary);
-			font-weight: 600;
-			box-shadow: 0 h.rem(2) h.rem(4) rgba(59, 130, 246, 0.1);
-		}
-		
-		// Красная вкладка для Delete Team
-		&--danger {
-			@include h.hover(false) {
-				background-color: #fef2f2;
-				color: #dc2626;
-			}
-			
-			&.settings-modal__tab--active {
-				background-color: #fef2f2;
-				color: #dc2626;
-				box-shadow: 0 h.rem(2) h.rem(4) rgba(220, 38, 38, 0.1);
-			}
-		}
-	}
-	
-	&__tab-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-		
-		svg {
-			width: h.rem(16);
-			height: h.rem(16);
-		}
-	}
-	
-	&__tab-label {
-		@include h.mobile {
-			display: none;
-		}
-	}
-	
-	&__content {
-		flex: 1;
-		overflow-y: auto;
-		min-height: 0;
-		
-		// Скрываем scrollbar
-		scrollbar-width: none;
-		-ms-overflow-style: none;
-		&::-webkit-scrollbar {
-			display: none;
-		}
-	}
-}
-
-.settings-content {
-	display: flex;
-	flex-direction: column;
-	padding: var(--spacing-lg);
-	
-	// Контент внутри вкладок
-	&__body {
+	&__avatar-section {
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-lg);
-		flex: 1;
+		gap: h.rem(12);
 	}
 	
-	// Footer с кнопками (только для General)
-	&__footer {
-		display: flex;
-		gap: var(--spacing-sm);
-		justify-content: flex-end;
-		padding-top: var(--spacing-lg);
-		border-top: var(--border);
-		margin-top: var(--spacing-lg);
-		flex-shrink: 0;
-	}
-}
-
-.settings-section {
-	display: flex;
-	flex-direction: column;
-	gap: var(--spacing-md);
-	
-	&__title {
-		margin: 0;
-		font-family: var(--font-family-secondary), sans-serif;
-		font-size: h.rem(18);
+	&__label {
+		font-size: h.rem(14);
 		font-weight: 600;
 		color: var(--color-text-primary);
-	}
-	
-	&__description {
 		margin: 0;
-		font-size: h.rem(14);
-		color: var(--color-text-secondary);
-		line-height: 1.5;
-	}
-}
-
-.settings-placeholder {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: var(--spacing-xl);
-	text-align: center;
-	background-color: var(--color-bg-secondary);
-	border-radius: var(--border-radius);
-	
-	svg {
-		color: var(--color-text-muted);
-		margin-bottom: var(--spacing-md);
 	}
 	
-	p {
-		margin: 0;
-		font-size: h.rem(14);
-		color: var(--color-text-muted);
-	}
-}
-
-.settings-danger {
-	display: flex;
-	gap: var(--spacing-md);
-	padding: var(--spacing-lg);
-	background-color: #fef2f2;
-	border: h.rem(1) solid #fecaca;
-	border-radius: var(--border-radius);
-	
-	&__icon {
-		flex-shrink: 0;
-		width: h.rem(48);
-		height: h.rem(48);
+	&__avatar-wrapper {
 		display: flex;
 		align-items: center;
-		justify-content: center;
-		background-color: #fee2e2;
+		gap: h.rem(16);
+	}
+	
+	&__avatar {
+		width: h.rem(80);
+		height: h.rem(80);
 		border-radius: 50%;
+		overflow: hidden;
+		border: 2px solid var(--color-border);
+		flex-shrink: 0;
 		
-		svg {
-			color: #dc2626;
+		&-img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+		
+		&-placeholder {
+			width: 100%;
+			height: 100%;
+			background-color: var(--color-primary);
+			color: var(--color-white);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: h.rem(32);
+			font-weight: 700;
 		}
 	}
 	
-	&__content {
-		flex: 1;
+	&__avatar-buttons {
 		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-sm);
+		gap: h.rem(8);
 	}
 	
-	&__title {
-		margin: 0;
-		font-family: var(--font-family-secondary), sans-serif;
-		font-size: h.rem(16);
-		font-weight: 600;
-		color: #dc2626;
+	&__avatar-upload {
+		display: inline-block;
+	}
+}
+
+.textarea {
+	width: 100%;
+	padding: h.rem(12) h.rem(16);
+	border: 1px solid var(--color-border);
+	border-radius: 0;
+	font-size: h.rem(14);
+	background-color: var(--color-background);
+	color: var(--color-text-primary);
+	font-family: inherit;
+	resize: vertical;
+	transition: border-color 0.2s ease;
+	
+	&:focus {
+		outline: none;
+		border-color: var(--color-primary);
 	}
 	
-	&__text {
-		margin: 0;
-		font-size: h.rem(14);
-		color: #991b1b;
-		line-height: 1.5;
+	&::placeholder {
+		color: var(--color-text-tertiary);
 	}
 	
-	.button {
-		align-self: flex-start;
-		margin-top: var(--spacing-xs);
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+		background-color: var(--color-background-secondary);
 	}
 }
 
 .checkbox-wrapper {
-	padding: var(--spacing-md);
-	background-color: var(--color-bg-secondary);
-	border-radius: var(--border-radius);
+	display: flex;
+	align-items: center;
+	padding: h.rem(16);
+	background-color: var(--color-background-secondary);
+	border: 1px solid var(--color-border);
 }
 
 .checkbox-label {
 	display: flex;
 	align-items: center;
-	gap: var(--spacing-sm);
+	gap: h.rem(12);
 	font-size: h.rem(14);
 	color: var(--color-text-primary);
 	cursor: pointer;
+	margin: 0;
 	
 	.checkbox-input {
 		width: h.rem(18);

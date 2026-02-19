@@ -134,7 +134,7 @@ function TodoWidget({ teamId, isPinned, onTogglePin }) {
 									<span className="todo-widget__text">{todo.text}</span>
 									{todo.completed && todo.completedBy && (
 										<span className="todo-widget__completed-by">
-                      Completed by {todo.completedBy}
+                      Выполнил {todo.completedBy}
                     </span>
 									)}
 								</div>

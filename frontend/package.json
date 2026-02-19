@@ -1,0 +1,43 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "sass:watch": "sass --watch src/styles/main.scss:src/styles/main.css --style=compressed --no-source-map",
+    "sass:build": "sass src/styles/main.scss:src/styles/main.css --style=compressed --no-source-map",
+    "dev:all": "npm-run-all --parallel dev sass:watch",
+	  "predeploy": "npm run sass:build && npm run build",
+	  "deploy": "gh-pages -d dist"
+  },
+  "dependencies": {
+    "axios": "^1.13.5",
+    "classnames": "^2.5.1",
+    "fabric": "^7.1.0",
+    "prismjs": "^1.30.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-hot-toast": "^2.6.0",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.13.0",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "gh-pages": "^6.3.0",
+    "globals": "^16.5.0",
+    "npm-run-all": "^4.1.5",
+    "sass": "^1.97.3",
+    "vite": "^7.3.1"
+  }
+}

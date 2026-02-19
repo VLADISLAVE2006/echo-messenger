@@ -5,6 +5,13 @@ function TeamCard({ team, onView }) {
 		return team.name.charAt(0).toUpperCase()
 	}
 	
+	const getAvatarLetter = (username) => {
+		return username?.charAt(0).toUpperCase() || 'U'
+	}
+	
+	const memberCount = team.member_count || team.memberCount || 0
+	const members = team.members || []
+	
 	return (
 		<div className="team-card">
 			<div className="team-card__header">
@@ -32,10 +39,10 @@ function TeamCard({ team, onView }) {
 								<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
 								<path d="M16 3.13a4 4 0 0 1 0 7.75"/>
 							</svg>
-							<span>{team.memberCount || 1}</span>
+							<span>{memberCount}</span>
 						</div>
 						
-						{team.isPrivate && (
+						{(team.is_private === 1 || team.isPrivate) && (
 							<div className="team-card__badge">
 								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 									<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -51,6 +58,24 @@ function TeamCard({ team, onView }) {
 			<p className="team-card__description">
 				{team.description || 'Нет описания'}
 			</p>
+			
+			{members.length > 0 && (
+				<div className="team-card__members-section">
+					<div className="team-card__members-scroll">
+						{members.map(member => (
+							<div key={member.id} className="team-card__member-avatar">
+								{member.avatar ? (
+									<img src={member.avatar} alt={member.username} />
+								) : (
+									<div className="team-card__member-avatar-placeholder">
+										{getAvatarLetter(member.username)}
+									</div>
+								)}
+							</div>
+						))}
+					</div>
+				</div>
+			)}
 			
 			<div className="team-card__actions">
 				<Button

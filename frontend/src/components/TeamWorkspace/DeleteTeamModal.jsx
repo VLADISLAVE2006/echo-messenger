@@ -1,10 +1,14 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import Input from '../common/Input'
 
 function DeleteTeamModal({ team, onClose, onDelete }) {
+	const { user } = useAuth()
+	const navigate = useNavigate()
 	const [confirmText, setConfirmText] = useState('')
 	const [loading, setLoading] = useState(false)
 	
@@ -15,12 +19,34 @@ function DeleteTeamModal({ team, onClose, onDelete }) {
 		
 		setLoading(true)
 		
-		// TODO: Интеграция с API для удаления команды
-		setTimeout(() => {
-			toast.success('Team deleted successfully')
+		try {
+			const password = localStorage.getItem('password')
+			
+			const response = await fetch(`http://localhost:5000/api/teams/${team.id}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					username: user.username,
+					password: password,
+				}),
+			})
+			
+			if (response.ok) {
+				toast.success('Team deleted successfully!')
+				onClose()
+				navigate('/dashboard', { replace: true })
+			} else {
+				const error = await response.json()
+				toast.error(error.error || 'Failed to delete team')
+			}
+		} catch (error) {
+			console.error('Error deleting team:', error)
+			toast.error('Failed to delete team')
+		} finally {
 			setLoading(false)
-			onDelete()
-		}, 500)
+		}
 	}
 	
 	return (
@@ -65,7 +91,7 @@ function DeleteTeamModal({ team, onClose, onDelete }) {
 					/>
 				</div>
 				
-				<div className="delete-team-modal__actions">
+				<div className="modal__actions">
 					<Button variant="secondary" onClick={onClose} disabled={loading}>
 						Cancel
 					</Button>
