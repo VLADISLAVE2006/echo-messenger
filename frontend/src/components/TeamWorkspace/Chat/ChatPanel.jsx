@@ -8,6 +8,7 @@ function ChatPanel({ teamId, teamData, chatId }) {
 	const [newMessage, setNewMessage] = useState('')
 	const [loading, setLoading] = useState(false)
 	const messagesEndRef = useRef(null)
+	const inputRef = useRef(null)
 	
 	useEffect(() => {
 		if (chatId) {
@@ -79,16 +80,23 @@ function ChatPanel({ teamId, teamData, chatId }) {
 			if (response.ok) {
 				const data = await response.json()
 				
+				const serverTimestamp = data.created_at || new Date().toISOString()
+				
 				const message = {
 					id: data.message_id,
 					user_id: user.id,
 					username: user.username,
+					avatar: user.avatar, // ⬅️ Добавляем аватарку
 					content: newMessage.trim(),
-					created_at: new Date().toISOString(),
+					created_at: serverTimestamp,
 				}
 				
 				setMessages([...messages, message])
 				setNewMessage('')
+				
+				setTimeout(() => {
+					inputRef.current?.focus()
+				}, 0)
 			} else {
 				const error = await response.json()
 				toast.error(error.error || 'Failed to send message')
@@ -102,16 +110,58 @@ function ChatPanel({ teamId, teamData, chatId }) {
 	}
 	
 	const formatTime = (timestamp) => {
-		const date = new Date(timestamp)
-		return date.toLocaleTimeString('en-US', {
-			hour: '2-digit',
-			minute: '2-digit',
-			hour12: false
-		})
+		if (!timestamp) return ''
+		
+		try {
+			let date = new Date(timestamp)
+			
+			if (isNaN(date.getTime())) {
+				date = new Date(timestamp + 'Z')
+			}
+			
+			if (isNaN(date.getTime())) {
+				return ''
+			}
+			
+			return date.toLocaleTimeString('en-US', {
+				hour: '2-digit',
+				minute: '2-digit',
+				hour12: false
+			})
+		} catch (error) {
+			console.error('Error formatting time:', error)
+			return ''
+		}
 	}
 	
 	const getAvatarLetter = (username) => {
 		return username?.charAt(0).toUpperCase() || 'U'
+	}
+	
+	const getAvatarColor = (username) => {
+		const colors = [
+			'#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
+			'#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2',
+		]
+		
+		let hash = 0
+		for (let i = 0; i < username.length; i++) {
+			hash = username.charCodeAt(i) + ((hash << 5) - hash)
+		}
+		
+		return colors[Math.abs(hash) % colors.length]
+	}
+	
+	// Функция для получения аватарки (из user или teamData.members)
+	const getMessageAvatar = (message) => {
+		// Если это текущий пользователь
+		if (message.user_id === user.id || message.username === user.username) {
+			return user.avatar
+		}
+		
+		// Ищем в членах команды
+		const member = teamData?.members?.find(m => m.username === message.username)
+		return member?.avatar || message.avatar
 	}
 	
 	if (!chatId) {
@@ -147,22 +197,44 @@ function ChatPanel({ teamId, teamData, chatId }) {
 					</div>
 				) : (
 					<>
-						{messages.map(message => (
-							<div key={message.id} className="chat-message">
-								<div className="chat-message__avatar">
-									<div className="chat-message__avatar-placeholder">
-										{getAvatarLetter(message.username)}
+						{messages.map(message => {
+							const avatarUrl = getMessageAvatar(message)
+							
+							return (
+								<div key={message.id} className="chat-message">
+									<div className="chat-message__avatar">
+										{avatarUrl ? (
+											<img
+												src={avatarUrl}
+												alt={message.username}
+												className="chat-message__avatar-img"
+												onError={(e) => {
+													// Fallback на placeholder если картинка не загрузилась
+													e.target.style.display = 'none'
+													e.target.nextElementSibling.style.display = 'flex'
+												}}
+											/>
+										) : null}
+										<div
+											className="chat-message__avatar-placeholder"
+											style={{
+												backgroundColor: getAvatarColor(message.username),
+												display: avatarUrl ? 'none' : 'flex'
+											}}
+										>
+											{getAvatarLetter(message.username)}
+										</div>
+									</div>
+									<div className="chat-message__content">
+										<div className="chat-message__header">
+											<span className="chat-message__author">{message.username}</span>
+											<span className="chat-message__time">{formatTime(message.created_at)}</span>
+										</div>
+										<p className="chat-message__text">{message.content}</p>
 									</div>
 								</div>
-								<div className="chat-message__content">
-									<div className="chat-message__header">
-										<span className="chat-message__author">{message.username}</span>
-										<span className="chat-message__time">{formatTime(message.created_at)}</span>
-									</div>
-									<p className="chat-message__text">{message.content}</p>
-								</div>
-							</div>
-						))}
+							)
+						})}
 						<div ref={messagesEndRef} />
 					</>
 				)}
@@ -170,12 +242,23 @@ function ChatPanel({ teamId, teamData, chatId }) {
 			
 			<form className="chat-panel__input" onSubmit={handleSendMessage}>
 				<input
+					ref={inputRef}
 					type="text"
 					value={newMessage}
 					onChange={(e) => setNewMessage(e.target.value)}
+					onKeyDown={(e) => {
+						if (e.key === ' ') {
+							e.stopPropagation()
+						}
+						if (e.key === 'Enter' && !e.shiftKey) {
+							e.preventDefault()
+							handleSendMessage(e)
+						}
+					}}
 					placeholder="Type a message..."
 					className="chat-panel__input-field"
 					disabled={loading}
+					autoComplete="off"
 				/>
 				<button
 					type="submit"

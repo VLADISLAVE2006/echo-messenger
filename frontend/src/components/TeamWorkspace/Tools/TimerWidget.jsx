@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import toast from 'react-hot-toast'
 import Button from '../../common/Button'
 import Input from '../../common/Input'
 
@@ -8,11 +9,32 @@ function TimerWidget({ teamId, isPinned, onTogglePin }) {
 	const [isActive, setIsActive] = useState(false)
 	const [isEditing, setIsEditing] = useState(false)
 	const intervalRef = useRef(null)
+	const hasNotifiedRef = useRef(false)
 	
 	useEffect(() => {
 		if (isActive && timeLeft > 0) {
 			intervalRef.current = setInterval(() => {
-				setTimeLeft(prev => prev - 1)
+				setTimeLeft(prev => {
+					const newTime = prev - 1
+					
+					// Уведомление когда время истекло
+					if (newTime === 0 && !hasNotifiedRef.current) {
+						hasNotifiedRef.current = true
+						
+						// Toast уведомление на русском
+						toast.success('Таймер завершен!', {
+							duration: 5000,
+							style: {
+								background: '#10B981',
+								color: '#fff',
+								fontSize: '16px',
+								fontWeight: '600',
+							},
+						})
+					}
+					
+					return newTime
+				})
 			}, 1000)
 		} else if (timeLeft === 0) {
 			setIsActive(false)
@@ -26,6 +48,7 @@ function TimerWidget({ teamId, isPinned, onTogglePin }) {
 			setTimeLeft(minutes * 60)
 			setIsEditing(false)
 		}
+		hasNotifiedRef.current = false
 		setIsActive(true)
 	}
 	
@@ -36,6 +59,7 @@ function TimerWidget({ teamId, isPinned, onTogglePin }) {
 	const resetTimer = () => {
 		setIsActive(false)
 		setTimeLeft(minutes * 60)
+		hasNotifiedRef.current = false
 	}
 	
 	const formatTime = (seconds) => {
@@ -86,7 +110,9 @@ function TimerWidget({ teamId, isPinned, onTogglePin }) {
 					</div>
 				) : (
 					<div className="countdown-widget__display">
-						<span className="countdown-widget__time">{formatTime(timeLeft)}</span>
+            <span className={`countdown-widget__time ${timeLeft === 0 ? 'countdown-widget__time--finished' : ''}`}>
+              {formatTime(timeLeft)}
+            </span>
 					</div>
 				)}
 				
@@ -103,7 +129,7 @@ function TimerWidget({ teamId, isPinned, onTogglePin }) {
 							<Button variant="secondary" onClick={resetTimer}>
 								Reset
 							</Button>
-							<Button variant="ghost" onClick={() => setIsEditing(true)}>
+							<Button variant="ghost" onClick={() => setIsEditing(true)} disabled={isActive}>
 								Edit
 							</Button>
 						</>

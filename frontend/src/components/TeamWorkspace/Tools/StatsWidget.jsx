@@ -12,9 +12,9 @@ function StatsWidget({ teamId, teamData, isPinned, onTogglePin }) {
 		if (teamData) {
 			setStats({
 				totalMembers: teamData.members?.length || 0,
-				onlineMembers: teamData.members?.filter(m => m.username === teamData.members[0]?.username).length || 1,
-				totalMessages: 127,
-				todayMessages: 12,
+				onlineMembers: 1, // Текущий пользователь всегда онлайн
+				totalMessages: 0, // Будет реализовано позже
+				todayMessages: 0, // Будет реализовано позже
 			})
 		}
 	}, [teamData])
