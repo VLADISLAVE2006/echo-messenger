@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
+from flask_socketio import SocketIO
 from datetime import timedelta
 
 from database import init_db
@@ -22,12 +23,27 @@ CORS(app,
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
      allow_headers=['Content-Type', 'Authorization'])
 
+# Инициализация SocketIO
+socketio = SocketIO(
+    app,
+    cors_allowed_origins='http://localhost:3000',
+    async_mode='threading',
+    logger=True,
+    engineio_logger=True
+)
+
 init_db()
 
+# Регистрация blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(message_bp)
 app.register_blueprint(team_bp)
 
+# Импорт и регистрация socket событий
+from socket_events import register_socket_events
+register_socket_events(socketio)
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Запуск с SocketIO
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
