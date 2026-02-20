@@ -15,7 +15,12 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=48)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False  # в продакшене с HTTPS установите True
 
-CORS(app, supports_credentials=True, origins=['http://localhost:3000'])
+# Расширенная настройка CORS для поддержки всех необходимых методов и заголовков
+CORS(app,
+     supports_credentials=True,
+     origins=['http://localhost:3000'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     allow_headers=['Content-Type', 'Authorization'])
 
 init_db()
 

@@ -123,17 +123,55 @@ def init_db():
             )
         ''')
 
+        # ----- НОВЫЕ ТАБЛИЦЫ -----
+
+        # Таблица заявок на вступление (вместо устаревшей team_requests)
         conn.execute('''
-            CREATE TABLE IF NOT EXISTS team_requests (
+            CREATE TABLE IF NOT EXISTS join_requests (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 team_id INTEGER NOT NULL,
                 user_id INTEGER NOT NULL,
                 status TEXT DEFAULT 'pending',
-                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(team_id, user_id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE(team_id, user_id)
             )
         ''')
+
+        # Индексы для производительности
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_join_requests_team_id ON join_requests(team_id)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_join_requests_user_id ON join_requests(user_id)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_join_requests_status ON join_requests(status)')
+
+        # Таблица вайтбордов
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS whiteboards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_id INTEGER NOT NULL,
+                name TEXT NOT NULL DEFAULT 'Whiteboard',
+                created_by INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+                FOREIGN KEY (created_by) REFERENCES users(id)
+            )
+        ''')
+
+        # Таблица данных вайтборда (версионность – храним последнюю запись)
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS whiteboard_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                whiteboard_id INTEGER NOT NULL,
+                data TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (whiteboard_id) REFERENCES whiteboards(id) ON DELETE CASCADE
+            )
+        ''')
+
+        # Удаляем устаревшую таблицу team_requests, если она существует
+        conn.execute('DROP TABLE IF EXISTS team_requests')
 
         conn.commit()

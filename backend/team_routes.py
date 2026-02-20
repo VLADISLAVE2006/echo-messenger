@@ -6,11 +6,22 @@ from datetime import datetime, timedelta
 
 team_bp = Blueprint('team', __name__, url_prefix='/api')
 
+# ---- Вспомогательные функции ----
+
 def is_team_creator(conn, team_id, user_id):
     team = conn.execute(
         'SELECT created_by FROM teams WHERE id = ?', (team_id,)
     ).fetchone()
     return team and team['created_by'] == user_id
+
+def is_team_admin(conn, team_id, user_id):
+    roles = conn.execute(
+        'SELECT role_name FROM team_roles WHERE team_id = ? AND user_id = ?',
+        (team_id, user_id)
+    ).fetchall()
+    return any(r['role_name'] == 'Admin' for r in roles)
+
+# ---- Существующие эндпоинты (без изменений) ----
 
 @team_bp.route('/teams', methods=['GET'])
 def get_teams():
@@ -182,11 +193,146 @@ def get_team(team_id):
         'members': members_with_roles
     }), 200
 
-@team_bp.route('/teams/<int:team_id>/request', methods=['POST'])
-def join_team_request(team_id):
+# ---- НОВЫЙ ЭНДПОИНТ: обновление ролей участника (с поддержкой CORS OPTIONS) ----
+
+@team_bp.route('/teams/<int:team_id>/members/<int:user_id>/roles', methods=['PUT', 'OPTIONS'])
+def update_member_roles(team_id, user_id):
+    # Preflight CORS
+    if request.method == 'OPTIONS':
+        return '', 200
+
     data = request.get_json()
     if not data:
         return jsonify({'error': 'Missing JSON'}), 400
+
+    username = data.get('username')
+    password = data.get('password')
+    new_roles = data.get('roles')  # ожидается список строк (например, ["Admin", "Moderator"])
+
+    if not username or not password or new_roles is None:
+        return jsonify({'error': 'Missing fields'}), 400
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        # Проверяем, что текущий пользователь является админом команды
+        if not is_team_admin(conn, team_id, user['id']):
+            return jsonify({'error': 'Admin rights required'}), 403
+
+        # Проверяем, что целевой пользователь является участником команды
+        member = conn.execute(
+            'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
+            (team_id, user_id)
+        ).fetchone()
+        if not member:
+            return jsonify({'error': 'User is not a member of this team'}), 404
+
+        # Удаляем старые роли и добавляем новые
+        conn.execute('DELETE FROM team_roles WHERE team_id = ? AND user_id = ?', (team_id, user_id))
+        for role in new_roles:
+            conn.execute(
+                'INSERT INTO team_roles (team_id, user_id, role_name) VALUES (?, ?, ?)',
+                (team_id, user_id, role)
+            )
+        conn.commit()
+
+    return jsonify({'message': 'Roles updated successfully'}), 200
+
+# ---- НОВАЯ СИСТЕМА ЗАЯВОК (join_requests) ----
+
+@team_bp.route('/teams/<int:team_id>/request', methods=['POST'])
+def send_join_request(team_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Missing JSON body'}), 400
+
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Username and password required'}), 400
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        # Проверяем, что команда существует
+        team = conn.execute('SELECT * FROM teams WHERE id = ?', (team_id,)).fetchone()
+        if not team:
+            return jsonify({'error': 'Team not found'}), 404
+
+        # Критически важно: нельзя отправить заявку в приватную команду
+        if team['is_private'] == 1:
+            return jsonify({'error': 'Cannot send request to private team'}), 403
+
+        # Проверяем, что пользователь не является участником
+        member = conn.execute(
+            'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
+            (team_id, user['id'])
+        ).fetchone()
+        if member:
+            return jsonify({'error': 'You are already a member of this team'}), 400
+
+        # Проверяем, что нет активной заявки
+        existing_request = conn.execute(
+            'SELECT * FROM join_requests WHERE team_id = ? AND user_id = ? AND status = ?',
+            (team_id, user['id'], 'pending')
+        ).fetchone()
+        if existing_request:
+            return jsonify({'error': 'You already have a pending request for this team'}), 400
+
+        # Создаём заявку
+        cur = conn.execute(
+            'INSERT INTO join_requests (team_id, user_id, status) VALUES (?, ?, ?)',
+            (team_id, user['id'], 'pending')
+        )
+        request_id = cur.lastrowid
+        conn.commit()
+
+    return jsonify({
+        'message': 'Request sent successfully',
+        'request_id': request_id
+    }), 200
+
+@team_bp.route('/teams/<int:team_id>/requests', methods=['GET'])
+def get_join_requests(team_id):
+    username = request.args.get('username')
+    password = request.args.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Username and password required'}), 400
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        # Проверяем, что пользователь админ команды
+        if not is_team_admin(conn, team_id, user['id']):
+            return jsonify({'error': 'Only admins can view requests'}), 403
+
+        # Получаем все pending заявки
+        requests_raw = conn.execute('''
+            SELECT jr.id, jr.user_id, jr.status, jr.created_at,
+                   u.username, u.avatar
+            FROM join_requests jr
+            JOIN users u ON jr.user_id = u.id
+            WHERE jr.team_id = ? AND jr.status = ?
+            ORDER BY jr.created_at DESC
+        ''', (team_id, 'pending')).fetchall()
+
+        requests = [dict(r) for r in requests_raw]
+
+    return jsonify({'requests': requests}), 200
+
+@team_bp.route('/teams/<int:team_id>/requests/<int:request_id>/approve', methods=['POST'])
+def approve_request(team_id, request_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Missing JSON body'}), 400
 
     username = data.get('username')
     password = data.get('password')
@@ -196,38 +342,177 @@ def join_team_request(team_id):
         return jsonify({'error': 'Invalid credentials'}), 401
 
     with get_db() as conn:
-        team = conn.execute(
-            'SELECT id FROM teams WHERE id = ?', (team_id,)
+        # Проверяем права администратора
+        if not is_team_admin(conn, team_id, user['id']):
+            return jsonify({'error': 'Only admins can approve requests'}), 403
+
+        # Проверяем, что заявка существует и pending
+        join_request = conn.execute(
+            'SELECT * FROM join_requests WHERE id = ? AND team_id = ? AND status = ?',
+            (request_id, team_id, 'pending')
         ).fetchone()
+        if not join_request:
+            return jsonify({'error': 'Request not found or already processed'}), 404
 
-        if not team:
-            return jsonify({'error': 'Team not found'}), 404
+        # Добавляем в участники команды
+        conn.execute(
+            'INSERT INTO team_members (team_id, user_id) VALUES (?, ?)',
+            (team_id, join_request['user_id'])
+        )
 
+        # Добавляем в чат команды
+        team = conn.execute('SELECT chat_id FROM teams WHERE id = ?', (team_id,)).fetchone()
+        if team and team['chat_id']:
+            conn.execute(
+                'INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)',
+                (team['chat_id'], join_request['user_id'], 'member')
+            )
+
+        # Обновляем статус заявки
+        conn.execute(
+            'UPDATE join_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            ('approved', request_id)
+        )
+
+        conn.commit()
+
+    return jsonify({'message': 'Request approved successfully'}), 200
+
+@team_bp.route('/teams/<int:team_id>/requests/<int:request_id>/reject', methods=['POST'])
+def reject_request(team_id, request_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Missing JSON body'}), 400
+
+    username = data.get('username')
+    password = data.get('password')
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        # Проверяем права администратора
+        if not is_team_admin(conn, team_id, user['id']):
+            return jsonify({'error': 'Only admins can reject requests'}), 403
+
+        # Проверяем, что заявка существует и pending
+        join_request = conn.execute(
+            'SELECT * FROM join_requests WHERE id = ? AND team_id = ? AND status = ?',
+            (request_id, team_id, 'pending')
+        ).fetchone()
+        if not join_request:
+            return jsonify({'error': 'Request not found or already processed'}), 404
+
+        # Обновляем статус
+        conn.execute(
+            'UPDATE join_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            ('rejected', request_id)
+        )
+        conn.commit()
+
+    return jsonify({'message': 'Request rejected successfully'}), 200
+
+# ---- ВАЙТБОРД (WHITEBOARD) ----
+
+@team_bp.route('/teams/<int:team_id>/whiteboard', methods=['GET'])
+def get_whiteboard(team_id):
+    username = request.args.get('username')
+    password = request.args.get('password')
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        # Проверяем, что пользователь участник команды
         member = conn.execute(
             'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
             (team_id, user['id'])
         ).fetchone()
+        if not member:
+            return jsonify({'error': 'You are not a member of this team'}), 403
 
-        if member:
-            return jsonify({'error': 'You are already a member of this team'}), 400
-
-        existing = conn.execute(
-            'SELECT * FROM team_requests WHERE team_id = ? AND user_id = ? AND status = ?',
-            (team_id, user['id'], 'pending')
+        # Получаем whiteboard команды (или создаём, если нет)
+        whiteboard = conn.execute(
+            'SELECT * FROM whiteboards WHERE team_id = ?',
+            (team_id,)
         ).fetchone()
 
-        if existing:
-            return jsonify({'error': 'Request already pending'}), 400
+        if not whiteboard:
+            # Создаём whiteboard
+            cur = conn.execute(
+                'INSERT INTO whiteboards (team_id, created_by) VALUES (?, ?)',
+                (team_id, user['id'])
+            )
+            whiteboard_id = cur.lastrowid
 
+            # Создаём пустые данные
+            conn.execute(
+                'INSERT INTO whiteboard_data (whiteboard_id, data) VALUES (?, ?)',
+                (whiteboard_id, '{"elements":[]}')
+            )
+            conn.commit()
+            data = '{"elements":[]}'
+        else:
+            # Получаем последние данные
+            wb_data = conn.execute(
+                'SELECT data FROM whiteboard_data WHERE whiteboard_id = ? ORDER BY updated_at DESC LIMIT 1',
+                (whiteboard['id'],)
+            ).fetchone()
+            data = wb_data['data'] if wb_data else '{"elements":[]}'
+            whiteboard_id = whiteboard['id']
+
+    return jsonify({
+        'whiteboard_id': whiteboard_id,
+        'data': data
+    }), 200
+
+@team_bp.route('/teams/<int:team_id>/whiteboard', methods=['PUT'])
+def update_whiteboard(team_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Missing JSON body'}), 400
+
+    username = data.get('username')
+    password = data.get('password')
+    whiteboard_data = data.get('data')
+
+    if not whiteboard_data:
+        return jsonify({'error': 'Whiteboard data required'}), 400
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        # Проверяем, что пользователь участник команды
+        member = conn.execute(
+            'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
+            (team_id, user['id'])
+        ).fetchone()
+        if not member:
+            return jsonify({'error': 'You are not a member of this team'}), 403
+
+        # Получаем whiteboard
+        whiteboard = conn.execute(
+            'SELECT * FROM whiteboards WHERE team_id = ?',
+            (team_id,)
+        ).fetchone()
+        if not whiteboard:
+            return jsonify({'error': 'Whiteboard not found'}), 404
+
+        # Обновляем данные (сохраняем новую версию)
         conn.execute(
-            'INSERT OR IGNORE INTO team_requests (team_id, user_id, status) VALUES (?, ?, ?)',
-            (team_id, user['id'], 'pending')
+            'INSERT INTO whiteboard_data (whiteboard_id, data) VALUES (?, ?)',
+            (whiteboard['id'], whiteboard_data)
         )
         conn.commit()
 
-    return jsonify({'message': 'Request sent successfully'}), 200
+    return jsonify({'message': 'Whiteboard updated successfully'}), 200
 
-# ----- Удаление участника из команды -----
+# ---- Существующие эндпоинты для удаления участника и обновления/удаления команды (без изменений) ----
+
 @team_bp.route('/teams/<int:team_id>/members/<int:user_id>', methods=['DELETE'])
 def remove_team_member(team_id, user_id):
     data = request.get_json()
@@ -248,18 +533,15 @@ def remove_team_member(team_id, user_id):
         if user_id == user['id']:
             return jsonify({'error': 'Cannot remove team creator'}), 400
 
-        # Получаем chat_id команды
         team = conn.execute(
             'SELECT chat_id FROM teams WHERE id = ?', (team_id,)
         ).fetchone()
 
-        # Удаляем из team_members (каскадно удалятся роли)
         conn.execute(
             'DELETE FROM team_members WHERE team_id = ? AND user_id = ?',
             (team_id, user_id)
         )
 
-        # Удаляем из чата команды, если он существует
         if team and team['chat_id']:
             conn.execute(
                 'DELETE FROM chat_members WHERE chat_id = ? AND user_id = ?',
@@ -270,7 +552,6 @@ def remove_team_member(team_id, user_id):
 
     return jsonify({'message': 'Member removed successfully'}), 200
 
-# ----- Обновление команды -----
 @team_bp.route('/teams/<int:team_id>', methods=['PUT'])
 def update_team(team_id):
     data = request.get_json()
@@ -344,7 +625,6 @@ def update_team(team_id):
 
     return jsonify({'message': 'Team updated successfully'}), 200
 
-# ----- Удаление команды -----
 @team_bp.route('/teams/<int:team_id>', methods=['DELETE'])
 def delete_team(team_id):
     data = request.get_json()
@@ -368,7 +648,6 @@ def delete_team(team_id):
         if not team:
             return jsonify({'error': 'Team not found'}), 404
 
-        # Удаляем команду (все связанные записи удалятся каскадно)
         conn.execute('DELETE FROM teams WHERE id = ?', (team_id,))
         conn.commit()
 
