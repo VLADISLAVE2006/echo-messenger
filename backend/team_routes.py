@@ -285,7 +285,7 @@ def update_member_roles(team_id, user_id):
 
 @team_bp.route('/teams/<int:team_id>/request', methods=['POST'])
 def send_join_request(team_id):
-    """Отправка заявки на вступление в команду"""
+    """Отправка заявки на вступление в ПРИВАТНУЮ команду"""
     data = request.get_json()
     if not data:
         return jsonify({'error': 'Missing JSON body'}), 400
@@ -305,8 +305,9 @@ def send_join_request(team_id):
         if not team:
             return jsonify({'error': 'Team not found'}), 404
 
-        if team['is_private'] == 1:
-            return jsonify({'error': 'Cannot send request to private team'}), 403
+        # ВАЖНО: Заявка только для приватных команд
+        if team['is_private'] == 0:
+            return jsonify({'error': 'This is a public team. Use direct join instead.'}), 400
 
         member = conn.execute(
             'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
@@ -333,6 +334,58 @@ def send_join_request(team_id):
         'message': 'Request sent successfully',
         'request_id': request_id
     }), 200
+
+@team_bp.route('/teams/<int:team_id>/join', methods=['POST'])
+def join_team_instantly(team_id):
+    """Мгновенное вступление в публичную команду"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Missing JSON body'}), 400
+
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Username and password required'}), 400
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        # Проверяем существование команды
+        team = conn.execute('SELECT * FROM teams WHERE id = ?', (team_id,)).fetchone()
+        if not team:
+            return jsonify({'error': 'Team not found'}), 404
+
+        # ВАЖНО: Проверяем что команда НЕ приватная
+        if team['is_private'] == 1:
+            return jsonify({'error': 'Cannot join private team directly. Send a join request instead.'}), 403
+
+        # Проверяем что не является участником
+        member = conn.execute(
+            'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
+            (team_id, user['id'])
+        ).fetchone()
+        if member:
+            return jsonify({'error': 'You are already a member of this team'}), 400
+
+        # Добавляем в участники
+        conn.execute(
+            'INSERT INTO team_members (team_id, user_id) VALUES (?, ?)',
+            (team_id, user['id'])
+        )
+
+        # Добавляем в чат команды
+        if team['chat_id']:
+            conn.execute(
+                'INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)',
+                (team['chat_id'], user['id'], 'member')
+            )
+
+        conn.commit()
+
+    return jsonify({'message': 'Successfully joined the team'}), 200
 
 @team_bp.route('/teams/<int:team_id>/requests', methods=['GET'])
 def get_join_requests(team_id):
@@ -684,3 +737,32 @@ def delete_team(team_id):
         conn.commit()
 
     return jsonify({'message': 'Team deleted successfully'}), 200
+
+@team_bp.route('/teams/public', methods=['GET', 'OPTIONS'])
+def get_public_teams():
+    """Получение списка ВСЕХ команд (публичных и приватных)"""
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    username = request.args.get('username')
+    password = request.args.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'username and password required'}), 400
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        teams = conn.execute('''
+            SELECT t.*,
+                   (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) as member_count,
+                   EXISTS(SELECT 1 FROM team_members WHERE team_id = t.id AND user_id = ?) as is_member,
+                   EXISTS(SELECT 1 FROM join_requests WHERE team_id = t.id AND user_id = ? AND status = 'pending') as has_pending_request
+            FROM teams t
+            ORDER BY t.created_at DESC
+        ''', (user['id'], user['id'])).fetchall()
+
+    return jsonify({'teams': [dict(team) for team in teams]}), 200
+

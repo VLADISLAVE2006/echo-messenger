@@ -57,6 +57,13 @@ function CreatePollWidget({ teamId, onPollCreated, isPinned, onTogglePin }) {
 		toast.success('Poll created!')
 	}
 	
+	// Обработчик для предотвращения перехвата пробела
+	const handleKeyDown = (e) => {
+		if (e.key === ' ') {
+			e.stopPropagation()
+		}
+	}
+	
 	return (
 		<div className="widget create-poll-widget">
 			<div className="widget__header">
@@ -75,6 +82,7 @@ function CreatePollWidget({ teamId, onPollCreated, isPinned, onTogglePin }) {
 					label="Question"
 					value={question}
 					onChange={(e) => setQuestion(e.target.value)}
+					onKeyDown={handleKeyDown}
 					placeholder="What's your question?"
 					maxLength={100}
 				/>
@@ -87,6 +95,7 @@ function CreatePollWidget({ teamId, onPollCreated, isPinned, onTogglePin }) {
 								type="text"
 								value={option}
 								onChange={(e) => updateOption(index, e.target.value)}
+								onKeyDown={handleKeyDown}
 								placeholder={`Option ${index + 1}`}
 								maxLength={50}
 							/>

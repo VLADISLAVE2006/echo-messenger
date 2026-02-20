@@ -11,8 +11,8 @@
     "sass:watch": "sass --watch src/styles/main.scss:src/styles/main.css --style=compressed --no-source-map",
     "sass:build": "sass src/styles/main.scss:src/styles/main.css --style=compressed --no-source-map",
     "dev:all": "npm-run-all --parallel dev sass:watch",
-	  "predeploy": "npm run sass:build && npm run build",
-	  "deploy": "gh-pages -d dist"
+    "predeploy": "npm run sass:build && npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "axios": "^1.13.5",

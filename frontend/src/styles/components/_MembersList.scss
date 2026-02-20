@@ -31,6 +31,7 @@
 
 .member-card {
 	padding: h.rem(20);
+	min-height: h.rem(200);
 	border: 1px solid var(--color-border);
 	border-radius: h.rem(7);
 	background-color: var(--color-background);
@@ -52,6 +53,7 @@
 		border-radius: 50%;
 		overflow: hidden;
 		margin-bottom: h.rem(12);
+		flex-shrink: 0;
 		
 		&-img {
 			width: 100%;
@@ -85,6 +87,9 @@
 	
 	&__info {
 		width: 100%;
+		flex: 1;
+		display: flex;
+		flex-direction: column;
 	}
 	
 	&__name {
@@ -92,6 +97,7 @@
 		font-weight: 600;
 		color: var(--color-text-primary);
 		margin: 0 0 h.rem(12) 0;
+		flex-shrink: 0;
 	}
 	
 	&__roles {
@@ -101,12 +107,14 @@
 		justify-content: center;
 		margin-bottom: h.rem(12);
 		min-height: h.rem(24);
+		flex: 1;
 	}
 	
 	&__role {
 		padding: h.rem(4) h.rem(10);
 		font-size: h.rem(11);
 		font-weight: 600;
+		height: fit-content;
 		background-color: var(--color-primary);
 		color: var(--color-white);
 		border-radius: h.rem(12);
@@ -121,7 +129,7 @@
 	}
 	
 	&__manage-btn {
-		margin-top: h.rem(4);
+		margin-top: auto;
 		padding: h.rem(8) h.rem(14);
 		background: none;
 		border: 1px solid var(--color-border);

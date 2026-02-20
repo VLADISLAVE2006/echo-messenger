@@ -17,10 +17,18 @@
 	border-bottom: var(--border);
 	flex-shrink: 0;
 	
+	@include h.mobile {
+		padding: var(--spacing-md) var(--spacing-lg);
+	}
+	
 	&__left {
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-lg);
+		
+		@include h.mobile {
+			gap: var(--spacing-md);
+		}
 	}
 	
 	&__back {
@@ -47,6 +55,11 @@
 			height: h.rem(18);
 			flex-shrink: 0;
 		}
+		
+		@include h.mobile {
+			padding: var(--spacing-xs) var(--spacing-sm);
+			font-size: h.rem(13);
+		}
 	}
 	
 	&__title {
@@ -56,6 +69,10 @@
 		font-size: h.rem(20);
 		font-weight: 700;
 		color: var(--color-text-primary);
+		
+		@include h.mobile {
+			font-size: h.rem(18);
+		}
 	}
 	
 	&__right {
@@ -70,6 +87,11 @@
 				width: h.rem(16);
 				height: h.rem(16);
 			}
+			
+			@include h.mobile {
+				font-size: h.rem(13);
+				padding: var(--spacing-xs) var(--spacing-sm);
+			}
 		}
 	}
 }
@@ -80,6 +102,11 @@
 	overflow: hidden;
 	min-height: 0;
 	
+	// Чат вниз на 1023px
+	@media (max-width: 1023px) {
+		flex-direction: column;
+	}
+	
 	&__main {
 		flex: 1;
 		display: flex;
@@ -87,16 +114,34 @@
 		border-right: var(--border);
 		min-width: 0;
 		overflow: hidden;
+		
+		// Убираем border когда чат внизу
+		@media (max-width: 1023px) {
+			border-right: none;
+			flex: 1;
+		}
 	}
 	
 	&__tabs {
 		display: flex;
-		justify-content: center; // ЦЕНТРИРУЕМ
+		justify-content: center;
 		gap: var(--spacing-xs);
 		padding: var(--spacing-md) var(--spacing-lg);
 		background-color: var(--color-white);
 		border-bottom: var(--border);
 		flex-shrink: 0;
+		
+		@include h.mobile {
+			padding: var(--spacing-sm) var(--spacing-md);
+			overflow-x: auto;
+			justify-content: flex-start;
+			
+			scrollbar-width: none;
+			-ms-overflow-style: none;
+			&::-webkit-scrollbar {
+				display: none;
+			}
+		}
 	}
 	
 	&__tab {
@@ -109,10 +154,16 @@
 		color: var(--color-text-secondary);
 		cursor: pointer;
 		transition: all var(--transition-duration) var(--transition-easing);
+		white-space: nowrap;
 		
 		@include h.hover(false) {
 			background-color: var(--color-bg-hover);
 			color: var(--color-text-primary);
+		}
+		
+		@include h.mobile {
+			padding: var(--spacing-xs) var(--spacing-md);
+			font-size: h.rem(13);
 		}
 		
 		&--active {
@@ -121,7 +172,7 @@
 			
 			@include h.hover(false) {
 				background-color: var(--color-primary-hover);
-				color: var(--color-white); // БЕЛЫЙ ТЕКСТ ПРИ ХОВЕРЕ
+				color: var(--color-white);
 			}
 		}
 	}
@@ -132,7 +183,7 @@
 		background-color: var(--color-bg-secondary);
 		min-height: 0;
 		
-		// Скрываем scrollbar
+		// Убираем скролл страницы
 		scrollbar-width: none;
 		-ms-overflow-style: none;
 		&::-webkit-scrollbar {
@@ -148,8 +199,24 @@
 		flex-direction: column;
 		overflow: hidden;
 		
+		@include h.tablet {
+			width: h.rem(320);
+		}
+		
+		// Чат внизу с 1023px
+		@media (max-width: 1023px) {
+			width: 100%;
+			height: h.rem(400);
+			max-height: h.rem(400);
+			min-height: h.rem(400);
+			border-top: var(--border);
+			border-left: none;
+		}
+		
 		@include h.mobile {
-			display: none;
+			height: h.rem(350);
+			max-height: h.rem(350);
+			min-height: h.rem(350);
 		}
 	}
 }

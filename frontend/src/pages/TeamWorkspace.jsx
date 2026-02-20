@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useSocket } from '../hooks/useSocket.js'
 import Button from '../components/common/Button'
 import WhiteboardCanvas from '../components/TeamWorkspace/Whiteboard/WhiteboardCanvas'
 import ToolsGrid from '../components/TeamWorkspace/Tools/ToolsGrid'

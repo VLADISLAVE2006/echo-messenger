@@ -230,7 +230,7 @@
 		margin: 0;
 		font-size: h.rem(14);
 		font-weight: 600;
-		color: var(--color-text-primary);
+		color: var(--color-text-primary) !important;
 	}
 	
 	&__close {
@@ -265,7 +265,7 @@
 		margin-bottom: h.rem(8);
 		font-size: h.rem(12);
 		font-weight: 600;
-		color: var(--color-text-secondary);
+		color: var(--color-text-secondary) !important;
 		text-transform: uppercase;
 		letter-spacing: h.rem(0.5);
 	}
@@ -288,7 +288,7 @@
 	&__color-value {
 		font-size: h.rem(13);
 		font-weight: 600;
-		color: var(--color-text-secondary);
+		color: var(--color-text-primary) !important;
 		text-transform: uppercase;
 	}
 	

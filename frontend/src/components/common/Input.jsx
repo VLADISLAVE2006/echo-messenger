@@ -6,6 +6,7 @@ function Input({
 	               name,
 	               value,
 	               onChange,
+	               onKeyDown,
 	               placeholder,
 	               label,
 	               error,
@@ -15,6 +16,18 @@ function Input({
 	
 	const isPassword = type === 'password'
 	const inputType = isPassword && showPassword ? 'text' : type
+	
+	const handleKeyDown = (e) => {
+		// Разрешаем пробел явно
+		if (e.key === ' ' || e.code === 'Space') {
+			e.stopPropagation()
+		}
+		
+		// Вызываем переданный обработчик если есть
+		if (onKeyDown) {
+			onKeyDown(e)
+		}
+	}
 	
 	return (
 		<div className="input-wrapper">
@@ -34,8 +47,10 @@ function Input({
 					name={name}
 					value={value}
 					onChange={onChange}
+					onKeyDown={handleKeyDown}
 					placeholder={placeholder}
 					className={`input ${error ? 'input--error' : ''}`}
+					autoComplete="off"
 				/>
 				
 				{isPassword && (

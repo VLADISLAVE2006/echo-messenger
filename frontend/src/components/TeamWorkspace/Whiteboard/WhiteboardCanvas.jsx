@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../../context/AuthContext'
 import WhiteboardToolbar from './WhiteboardToolbar'
 import ToolSettings from './ToolSettings'
+import ConfirmModal from '../../common/ConfirmModal'
 
 function WhiteboardCanvas({ teamId }) {
 	const { user } = useAuth()
@@ -23,6 +24,7 @@ function WhiteboardCanvas({ teamId }) {
 	
 	const [showToolSettings, setShowToolSettings] = useState(null)
 	const [toolSettingsPosition, setToolSettingsPosition] = useState({ x: 0, y: 0 })
+	const [showClearModal, setShowClearModal] = useState(false)
 	
 	useEffect(() => {
 		const handleKeyDown = (e) => {
@@ -288,12 +290,15 @@ function WhiteboardCanvas({ teamId }) {
 	}
 	
 	const handleClear = () => {
-		if (confirm('Clear entire whiteboard?')) {
-			const newElements = []
-			setElements(newElements)
-			setHistory([...history.slice(0, historyStep + 1), newElements])
-			setHistoryStep(historyStep + 1)
-		}
+		setShowClearModal(true)
+	}
+	
+	const confirmClear = () => {
+		const newElements = []
+		setElements(newElements)
+		setHistory([...history.slice(0, historyStep + 1), newElements])
+		setHistoryStep(historyStep + 1)
+		setShowClearModal(false)
 	}
 	
 	const handleToolClick = (toolName, event) => {
@@ -370,6 +375,17 @@ function WhiteboardCanvas({ teamId }) {
 					onMouseLeave={handleMouseUp}
 				/>
 			</div>
+			
+			<ConfirmModal
+				isOpen={showClearModal}
+				onClose={() => setShowClearModal(false)}
+				onConfirm={confirmClear}
+				title="Clear Whiteboard"
+				message="Are you sure you want to clear the entire whiteboard? This action cannot be undone."
+				confirmText="Clear"
+				cancelText="Cancel"
+				danger={true}
+			/>
 		</div>
 	)
 }

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 
 function TeamDetailsModal({ team, onClose }) {
 	const { user } = useAuth()
+	const navigate = useNavigate()
 	const [loading, setLoading] = useState(false)
 	const [members, setMembers] = useState([])
 	const [teamDetails, setTeamDetails] = useState(null)
@@ -45,33 +47,57 @@ function TeamDetailsModal({ team, onClose }) {
 		}
 	}
 	
-	const handleJoinRequest = async () => {
+	const handleJoinOrRequest = async () => {
 		setLoading(true)
 		
 		try {
 			const password = localStorage.getItem('password')
 			
-			const response = await fetch(`http://localhost:5000/api/teams/${team.id}/request`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					username: user.username,
-					password: password,
-				}),
-			})
-			
-			if (response.ok) {
-				toast.success('Request sent successfully!')
-				onClose()
+			// Если приватная - отправляем заявку
+			if (team.is_private) {
+				const response = await fetch(`http://localhost:5000/api/teams/${team.id}/request`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						username: user.username,
+						password: password,
+					}),
+				})
+				
+				if (response.ok) {
+					toast.success('Join request sent!')
+					onClose()
+				} else {
+					const error = await response.json()
+					toast.error(error.error || 'Failed to send request')
+				}
 			} else {
-				const error = await response.json()
-				toast.error(error.error || 'Failed to send request')
+				// Если публичная - вступаем сразу
+				const response = await fetch(`http://localhost:5000/api/teams/${team.id}/join`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						username: user.username,
+						password: password,
+					}),
+				})
+				
+				if (response.ok) {
+					toast.success('Вы успешно вступили в команду!') // ⬅️ Изменено
+					onClose()
+					navigate(`/team/${team.id}`)
+				} else {
+					const error = await response.json()
+					toast.error(error.error || 'Failed to join team')
+				}
 			}
 		} catch (error) {
-			console.error('Error sending request:', error)
-			toast.error('Failed to send request')
+			console.error('Error joining team:', error)
+			toast.error('Failed to join team')
 		} finally {
 			setLoading(false)
 		}
@@ -86,6 +112,25 @@ function TeamDetailsModal({ team, onClose }) {
 	}
 	
 	const memberCount = teamDetails?.member_count || members.length || team.member_count || 1
+	
+	// Определяем текст кнопки
+	const getButtonText = () => {
+		if (loading) return 'Sending...'
+		if (team.is_member) return 'Open Team'
+		if (team.has_pending_request) return 'Request Sent'
+		if (team.is_private) return 'Request to Join'
+		return 'Join Now'
+	}
+	
+	// Определяем действие кнопки
+	const handleButtonClick = () => {
+		if (team.is_member) {
+			onClose()
+			navigate(`/team/${team.id}`)
+		} else if (!team.has_pending_request) {
+			handleJoinOrRequest()
+		}
+	}
 	
 	return (
 		<Modal title={team.name} onClose={onClose}>
@@ -168,10 +213,10 @@ function TeamDetailsModal({ team, onClose }) {
 					<Button
 						type="button"
 						variant="primary"
-						onClick={handleJoinRequest}
-						disabled={loading}
+						onClick={handleButtonClick}
+						disabled={loading || team.has_pending_request}
 					>
-						{loading ? 'Sending...' : 'Send Request'}
+						{getButtonText()}
 					</Button>
 				</div>
 			</div>

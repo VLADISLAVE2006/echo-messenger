@@ -31,8 +31,9 @@ function App() {
 							</ProtectedRoute>
 						}
 					/>
+					{/* ⬇️ ИЗМЕНЕНО: /team/:teamId вместо /teams/:teamId */}
 					<Route
-						path="/teams/:teamId"
+						path="/team/:teamId"
 						element={
 							<ProtectedRoute>
 								<TeamWorkspace />

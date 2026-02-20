@@ -6,6 +6,7 @@ import Input from '../components/common/Input'
 import TeamCard from '../components/Teams/TeamCard'
 import CreateTeamModal from '../components/Teams/CreateTeamModal'
 import TeamDetailsModal from '../components/Teams/TeamDetailsModal'
+import toast from 'react-hot-toast'
 
 function Teams() {
 	const { user } = useAuth()
@@ -20,6 +21,7 @@ function Teams() {
 	}, [])
 	
 	const loadTeams = async () => {
+		setLoading(true)
 		try {
 			const password = localStorage.getItem('password')
 			
@@ -27,13 +29,13 @@ function Teams() {
 				return
 			}
 			
-			// Передаем через query params для GET запроса
+			// ⬇️ ИЗМЕНЕНО: Используем /teams/public
 			const params = new URLSearchParams({
 				username: user.username,
 				password: password,
 			})
 			
-			const response = await fetch(`http://localhost:5000/api/teams?${params}`, {
+			const response = await fetch(`http://localhost:5000/api/teams/public?${params}`, {
 				method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -43,9 +45,14 @@ function Teams() {
 			if (response.ok) {
 				const data = await response.json()
 				setTeams(data.teams || [])
+			} else {
+				toast.error('Failed to load teams')
 			}
 		} catch (error) {
 			console.error('Error loading teams:', error)
+			toast.error('Failed to load teams')
+		} finally {
+			setLoading(false)
 		}
 	}
 	
@@ -86,7 +93,11 @@ function Teams() {
 						/>
 					</div>
 					
-					{teams.length > 0 ? (
+					{loading ? (
+						<div className="teams__loading">
+							<div className="loading-spinner"></div>
+						</div>
+					) : teams.length > 0 ? (
 						<div className="teams__grid">
 							{filteredTeams.length > 0 ? (
 								filteredTeams.map(team => (
@@ -94,6 +105,7 @@ function Teams() {
 										key={team.id}
 										team={team}
 										onView={handleViewTeam}
+										onUpdate={loadTeams}
 									/>
 								))
 							) : (

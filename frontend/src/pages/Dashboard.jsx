@@ -97,7 +97,7 @@ function Dashboard() {
 	}
 	
 	const handleTeamClick = (teamId) => {
-		navigate(`/teams/${teamId}`)
+		navigate(`/team/${teamId}`)
 	}
 	
 	const getTeamLetter = (name) => {
