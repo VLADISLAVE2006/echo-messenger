@@ -10,8 +10,11 @@ class SocketService {
 	
 	connect() {
 		if (this.socket?.connected) {
+			console.log('🔄 Socket already connected:', this.socket.id)
 			return this.socket
 		}
+		
+		console.log('🔌 Creating new socket connection to:', SOCKET_URL)
 		
 		this.socket = io(SOCKET_URL, {
 			transports: ['websocket', 'polling'],
@@ -23,13 +26,17 @@ class SocketService {
 			this.connected = true
 		})
 		
-		this.socket.on('disconnect', () => {
-			console.log('❌ Socket disconnected')
+		this.socket.on('connect_error', (error) => {
+			console.error('❌ Socket connection error:', error)
+		})
+		
+		this.socket.on('disconnect', (reason) => {
+			console.log('❌ Socket disconnected:', reason)
 			this.connected = false
 		})
 		
 		this.socket.on('error', (error) => {
-			console.error('Socket error:', error)
+			console.error('⚠️ Socket error:', error)
 		})
 		
 		return this.socket
@@ -65,6 +72,7 @@ class SocketService {
 	
 	// Team methods
 	joinTeam(username, password, teamId) {
+		console.log('📤 joinTeam called:', { username, teamId, connected: this.socket?.connected })
 		this.emit('join_team', { username, password, team_id: teamId })
 	}
 	
@@ -106,6 +114,24 @@ class SocketService {
 			team_id: teamId,
 			element,
 			username,
+		})
+	}
+	
+	// ⬇️ НОВЫЕ МЕТОДЫ
+	sendWhiteboardDrawing(teamId, element, username) {
+		this.emit('whiteboard_drawing', {
+			team_id: teamId,
+			element,
+			username,
+		})
+	}
+	
+	sendWhiteboardCursor(teamId, username, x, y) {
+		this.emit('whiteboard_cursor', {
+			team_id: teamId,
+			username,
+			x,
+			y,
 		})
 	}
 	

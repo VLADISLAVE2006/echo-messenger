@@ -171,6 +171,52 @@ def init_db():
             )
         ''')
 
+        # ⬇️ ТАБЛИЦЫ ДЛЯ POLLS (ГОЛОСОВАНИЯ)
+
+        # Таблица голосований
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS polls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_id INTEGER NOT NULL,
+                question TEXT NOT NULL,
+                created_by INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+                FOREIGN KEY (created_by) REFERENCES users(id)
+            )
+        ''')
+
+        # Таблица опций голосования
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS poll_options (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                poll_id INTEGER NOT NULL,
+                text TEXT NOT NULL,
+                FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE
+            )
+        ''')
+
+        # Таблица голосов
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS poll_votes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                poll_id INTEGER NOT NULL,
+                option_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                voted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE,
+                FOREIGN KEY (option_id) REFERENCES poll_options(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE(poll_id, user_id)
+            )
+        ''')
+
+        # Добавление поля active_poll_id в teams, если его нет
+        try:
+            conn.execute('ALTER TABLE teams ADD COLUMN active_poll_id INTEGER REFERENCES polls(id)')
+        except sqlite3.OperationalError:
+            pass
+
         # Удаляем устаревшую таблицу team_requests, если она существует
         conn.execute('DROP TABLE IF EXISTS team_requests')
 

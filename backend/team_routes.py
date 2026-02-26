@@ -191,12 +191,48 @@ def get_team(team_id):
                 'is_online': is_online
             })
 
+        # ⬇️ ДОБАВЛЯЕМ: Получаем активный poll если есть
+        active_poll = None
+        if team['active_poll_id']:
+            poll_data = conn.execute('''
+                SELECT p.*, u.username as created_by
+                FROM polls p
+                JOIN users u ON p.created_by = u.id
+                WHERE p.id = ?
+            ''', (team['active_poll_id'],)).fetchone()
+
+            if poll_data:
+                # Получаем опции с количеством голосов
+                options = conn.execute('''
+                    SELECT po.id, po.text,
+                           COUNT(pv.id) as votes,
+                           CASE WHEN EXISTS (
+                               SELECT 1 FROM poll_votes pv2
+                               WHERE pv2.option_id = po.id
+                               AND pv2.user_id = ?
+                           ) THEN 1 ELSE 0 END as voted_by_current_user
+                    FROM poll_options po
+                    LEFT JOIN poll_votes pv ON po.id = pv.option_id
+                    WHERE po.poll_id = ?
+                    GROUP BY po.id
+                    ORDER BY po.id
+                ''', (user['id'], poll_data['id'])).fetchall()
+
+                active_poll = {
+                    'id': poll_data['id'],
+                    'question': poll_data['question'],
+                    'created_by': poll_data['created_by'],
+                    'created_at': poll_data['created_at'],
+                    'options': [dict(opt) for opt in options]
+                }
+
     team_dict = dict(team)
     team_dict['member_count'] = member_count
 
     return jsonify({
         'team': team_dict,
-        'members': members_with_roles
+        'members': members_with_roles,
+        'active_poll': active_poll  # ⬅️ ДОБАВЛЯЕМ
     }), 200
 
 @team_bp.route('/teams/<int:team_id>/members/<int:user_id>/roles', methods=['PUT', 'OPTIONS'])
@@ -766,3 +802,166 @@ def get_public_teams():
 
     return jsonify({'teams': [dict(team) for team in teams]}), 200
 
+
+# ==================== POLLS (ГОЛОСОВАНИЯ) ====================
+
+@team_bp.route('/teams/<int:team_id>/polls', methods=['POST'])
+def create_poll(team_id):
+    """Создание нового голосования"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Missing JSON'}), 400
+
+    username = data.get('username')
+    password = data.get('password')
+    question = data.get('question')
+    options = data.get('options', [])
+
+    if not question or len(options) < 2:
+        return jsonify({'error': 'Question and at least 2 options required'}), 400
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        # Проверяем членство
+        member = conn.execute(
+            'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
+            (team_id, user['id'])
+        ).fetchone()
+        if not member:
+            return jsonify({'error': 'Not a team member'}), 403
+
+        # Создаем poll
+        cur = conn.execute(
+            'INSERT INTO polls (team_id, question, created_by) VALUES (?, ?, ?)',
+            (team_id, question, user['id'])
+        )
+        poll_id = cur.lastrowid
+
+        # Создаем опции
+        for option_text in options:
+            conn.execute(
+                'INSERT INTO poll_options (poll_id, text) VALUES (?, ?)',
+                (poll_id, option_text)
+            )
+
+        # Делаем poll активным
+        conn.execute(
+            'UPDATE teams SET active_poll_id = ? WHERE id = ?',
+            (poll_id, team_id)
+        )
+
+        conn.commit()
+
+        # Получаем созданный poll с опциями
+        poll_options = conn.execute(
+            'SELECT id, text, 0 as votes FROM poll_options WHERE poll_id = ?',
+            (poll_id,)
+        ).fetchall()
+
+    poll_data = {
+        'id': poll_id,
+        'question': question,
+        'created_by': user['username'],
+        'created_at': datetime.now().isoformat(),
+        'options': [{'id': opt['id'], 'text': opt['text'], 'votes': 0} for opt in poll_options]
+    }
+
+    return jsonify({'poll': poll_data}), 201
+
+@team_bp.route('/teams/<int:team_id>/polls/<int:poll_id>/vote', methods=['POST'])
+def vote_poll(team_id, poll_id):
+    """Голосование в poll"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Missing JSON'}), 400
+
+    username = data.get('username')
+    password = data.get('password')
+    option_id = data.get('option_id')
+
+    if option_id is None:
+        return jsonify({'error': 'option_id required'}), 400
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        # Проверяем членство
+        member = conn.execute(
+            'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
+            (team_id, user['id'])
+        ).fetchone()
+        if not member:
+            return jsonify({'error': 'Not a team member'}), 403
+
+        # Проверяем что poll существует
+        poll = conn.execute(
+            'SELECT * FROM polls WHERE id = ? AND team_id = ?',
+            (poll_id, team_id)
+        ).fetchone()
+        if not poll:
+            return jsonify({'error': 'Poll not found'}), 404
+
+        # Проверяем что опция существует
+        option = conn.execute(
+            'SELECT * FROM poll_options WHERE id = ? AND poll_id = ?',
+            (option_id, poll_id)
+        ).fetchone()
+        if not option:
+            return jsonify({'error': 'Option not found'}), 404
+
+        # Проверяем не голосовал ли уже
+        existing_vote = conn.execute(
+            'SELECT * FROM poll_votes WHERE poll_id = ? AND user_id = ?',
+            (poll_id, user['id'])
+        ).fetchone()
+        if existing_vote:
+            return jsonify({'error': 'Already voted'}), 400
+
+        # Записываем голос
+        conn.execute(
+            'INSERT INTO poll_votes (poll_id, option_id, user_id) VALUES (?, ?, ?)',
+            (poll_id, option_id, user['id'])
+        )
+        conn.commit()
+
+        # Получаем обновленное количество голосов
+        vote_count = conn.execute(
+            'SELECT COUNT(*) as count FROM poll_votes WHERE option_id = ?',
+            (option_id,)
+        ).fetchone()['count']
+
+    return jsonify({'votes': vote_count}), 200
+
+@team_bp.route('/teams/<int:team_id>/active-poll', methods=['POST'])
+def set_active_poll(team_id):
+    """Установить активное голосование (или закрыть если poll_id=null)"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Missing JSON'}), 400
+
+    username = data.get('username')
+    password = data.get('password')
+    poll_id = data.get('poll_id')  # None чтобы закрыть poll
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        # Проверяем права (админ или создатель)
+        if not is_team_admin(conn, team_id, user['id']) and not is_team_creator(conn, team_id, user['id']):
+            return jsonify({'error': 'Admin rights required'}), 403
+
+        # Устанавливаем активный poll
+        conn.execute(
+            'UPDATE teams SET active_poll_id = ? WHERE id = ?',
+            (poll_id, team_id)
+        )
+        conn.commit()
+
+    return jsonify({'status': 'success'}), 200

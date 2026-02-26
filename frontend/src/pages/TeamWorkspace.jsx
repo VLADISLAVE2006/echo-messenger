@@ -11,6 +11,7 @@ import SettingsModal from '../components/TeamWorkspace/SettingsModal'
 import TeamPoll from '../components/TeamWorkspace/TeamPoll'
 import CreatePollModal from '../components/TeamWorkspace/CreatePollModal'
 import Loading from '../components/common/Loading'
+import toast from 'react-hot-toast' // ⬅️ ДОБАВЬ
 
 function TeamWorkspace() {
 	const { teamId } = useParams()
@@ -24,7 +25,8 @@ function TeamWorkspace() {
 	const [members, setMembers] = useState([])
 	const [loading, setLoading] = useState(true)
 	
-	// Проверяем, является ли пользователь админом
+	const socket = useSocket(teamId, user)
+	
 	const isAdmin = members?.some(
 		m => m.username === user.username && (m.roles?.includes('Admin') || m.roles?.includes('Создатель'))
 	) || false
@@ -32,6 +34,58 @@ function TeamWorkspace() {
 	useEffect(() => {
 		loadTeamData()
 	}, [teamId])
+	
+	useEffect(() => {
+		if (!socket.socket) return
+		
+		console.log('🔌 Setting up socket listeners')
+		
+		socket.on('joined_team', (data) => {
+			console.log('✅ Joined team:', data)
+		})
+		
+		socket.on('user_online', (data) => {
+			console.log('👤 User online:', data)
+			loadTeamData()
+		})
+		
+		socket.on('user_offline', (data) => {
+			console.log('👤 User offline:', data)
+			loadTeamData()
+		})
+		
+		// ⬇️ ДОБАВЬ ОБРАБОТЧИКИ ДЛЯ POLL
+		socket.on('new_poll', (poll) => {
+			console.log('🆕 NEW POLL:', poll)
+			toast.success(`New poll: ${poll.question}`)
+			// Автоматически показываем новое голосование
+			setActivePoll(poll)
+		})
+		
+		socket.on('poll_updated', (data) => {
+			console.log('📊 POLL UPDATED:', data)
+			// Обновляем activePoll если это тот же poll
+			if (activePoll && activePoll.id === data.poll_id) {
+				setActivePoll(prev => ({
+					...prev,
+					options: prev.options.map(opt => {
+						if (opt.id === data.option_id) {
+							return { ...opt, votes: data.votes }
+						}
+						return opt
+					})
+				}))
+			}
+		})
+		
+		return () => {
+			socket.off('joined_team')
+			socket.off('user_online')
+			socket.off('user_offline')
+			socket.off('new_poll') // ⬅️ ДОБАВЬ
+			socket.off('poll_updated') // ⬅️ ДОБАВЬ
+		}
+	}, [socket.socket, activePoll]) // ⬅️ ДОБАВЬ activePoll в dependencies
 	
 	const loadTeamData = async () => {
 		try {
@@ -51,7 +105,7 @@ function TeamWorkspace() {
 			
 			if (response.ok) {
 				const data = await response.json()
-				console.log('Team data:', data) // Для отладки
+				console.log('Team data:', data)
 				setTeamData(data.team)
 				setMembers(data.members || [])
 			} else {
@@ -74,18 +128,19 @@ function TeamWorkspace() {
 	
 	const handlePollCreated = (poll) => {
 		setActivePoll(poll)
+		setIsCreatePollOpen(false) // ⬅️ ЗАКРЫВАЕМ МОДАЛКУ
 	}
 	
 	const renderContent = () => {
 		switch (activeTab) {
 			case 'whiteboard':
-				return <WhiteboardCanvas teamId={teamId} />
+				return <WhiteboardCanvas teamId={teamId} socket={socket} />
 			case 'tools':
-				return <ToolsGrid teamId={teamId} teamData={{ ...teamData, members }} />
+				return <ToolsGrid teamId={teamId} teamData={{ ...teamData, members }} socket={socket} />
 			case 'members':
 				return <MembersList teamId={teamId} teamData={{ ...teamData, members }} />
 			default:
-				return <WhiteboardCanvas teamId={teamId} />
+				return <WhiteboardCanvas teamId={teamId} socket={socket} />
 		}
 	}
 	
@@ -147,10 +202,11 @@ function TeamWorkspace() {
 				</div>
 			</div>
 			
+			{/* ⬇️ ПЕРЕДАЙ socket и teamId */}
 			{activePoll && (
 				<TeamPoll
-					teamData={{ ...teamData, members }}
-					isAdmin={isAdmin}
+					teamId={teamId}
+					socket={socket}
 					activePoll={activePoll}
 					onClosePoll={() => setActivePoll(null)}
 				/>
@@ -188,7 +244,8 @@ function TeamWorkspace() {
 					<ChatPanel
 						teamId={teamId}
 						teamData={{ ...teamData, members }}
-						chatId={teamData?.chat_id} // Передаем chat_id
+						chatId={teamData?.chat_id}
+						socket={socket}
 					/>
 				</div>
 			</div>
@@ -201,8 +258,11 @@ function TeamWorkspace() {
 				/>
 			)}
 			
+			{/* ⬇️ ПЕРЕДАЙ socket и teamId */}
 			{isCreatePollOpen && (
 				<CreatePollModal
+					teamId={teamId}
+					socket={socket}
 					onClose={() => setIsCreatePollOpen(false)}
 					onPollCreated={handlePollCreated}
 				/>

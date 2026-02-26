@@ -1,34 +1,60 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../../context/AuthContext'
+import { useWhiteboard } from '../../../hooks/useWhiteboard'
 import WhiteboardToolbar from './WhiteboardToolbar'
 import ToolSettings from './ToolSettings'
 import ConfirmModal from '../../common/ConfirmModal'
 
-function WhiteboardCanvas({ teamId }) {
+function WhiteboardCanvas({ teamId, socket }) {
 	const { user } = useAuth()
 	const canvasRef = useRef(null)
 	const containerRef = useRef(null)
-	const [isDrawing, setIsDrawing] = useState(false)
+	
 	const [tool, setTool] = useState('pen')
 	const [drawingColor, setDrawingColor] = useState('#000000')
 	const [lineWidth, setLineWidth] = useState(2)
-	const [elements, setElements] = useState([])
-	const [currentElement, setCurrentElement] = useState(null)
-	const [history, setHistory] = useState([[]])
-	const [historyStep, setHistoryStep] = useState(0)
-	
-	const [isPanning, setIsPanning] = useState(false)
-	const [panStart, setPanStart] = useState({ x: 0, y: 0 })
-	const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
-	const [spacePressed, setSpacePressed] = useState(false)
 	
 	const [showToolSettings, setShowToolSettings] = useState(null)
 	const [toolSettingsPosition, setToolSettingsPosition] = useState({ x: 0, y: 0 })
 	const [showClearModal, setShowClearModal] = useState(false)
 	
+	// ИСПОЛЬЗУЕМ WHITEBOARD HOOK
+	const {
+		elements,
+		currentElement,
+		setCurrentElement,
+		liveElements,
+		cursors,
+		isDrawing,
+		setIsDrawing,
+		isPanning,
+		setIsPanning,
+		panStart,
+		setPanStart,
+		panOffset,
+		setPanOffset,
+		spacePressed,
+		setSpacePressed,
+		addElement,
+		sendLiveElement,
+		sendCursorPosition,
+		undo,
+		redo,
+		clear,
+		canUndo,
+		canRedo,
+	} = useWhiteboard(teamId, user, socket)
+	
+	// Keyboard shortcuts
 	useEffect(() => {
 		const handleKeyDown = (e) => {
 			if (e.code === 'Space' && !isDrawing) {
+				const activeElement = document.activeElement
+				if (activeElement &&
+					(activeElement.tagName === 'INPUT' ||
+						activeElement.tagName === 'TEXTAREA')) {
+					return
+				}
 				e.preventDefault()
 				setSpacePressed(true)
 			}
@@ -50,9 +76,10 @@ function WhiteboardCanvas({ teamId }) {
 		}
 	}, [isDrawing])
 	
+	// Redraw canvas
 	useEffect(() => {
 		redrawCanvas()
-	}, [elements, currentElement, panOffset])
+	}, [elements, currentElement, panOffset, liveElements, cursors])
 	
 	const redrawCanvas = () => {
 		const canvas = canvasRef.current
@@ -64,8 +91,27 @@ function WhiteboardCanvas({ teamId }) {
 		ctx.save()
 		ctx.translate(panOffset.x, panOffset.y)
 		
+		// Рисуем сохраненные элементы
 		elements.forEach(element => drawElement(ctx, element))
-		if (currentElement) drawElement(ctx, currentElement)
+		
+		// Рисуем live элементы других пользователей
+		Object.entries(liveElements).forEach(([username, element]) => {
+			ctx.save()
+			ctx.globalAlpha = 0.6
+			drawElement(ctx, element)
+			ctx.globalAlpha = 1.0
+			ctx.restore()
+		})
+		
+		// Рисуем текущий элемент (свой)
+		if (currentElement) {
+			drawElement(ctx, currentElement)
+		}
+		
+		// Рисуем курсоры других пользователей
+		Object.entries(cursors).forEach(([username, pos]) => {
+			drawCursor(ctx, pos.x, pos.y, username)
+		})
 		
 		ctx.restore()
 	}
@@ -120,6 +166,37 @@ function WhiteboardCanvas({ teamId }) {
 		}
 		
 		ctx.globalCompositeOperation = 'source-over'
+	}
+	
+	const drawCursor = (ctx, x, y, username) => {
+		ctx.save()
+		
+		// Рисуем курсор (треугольник)
+		ctx.fillStyle = '#FF6B6B'
+		ctx.strokeStyle = '#FFFFFF'
+		ctx.lineWidth = 2
+		
+		ctx.beginPath()
+		ctx.moveTo(x, y)
+		ctx.lineTo(x + 12, y + 12)
+		ctx.lineTo(x, y + 16)
+		ctx.closePath()
+		ctx.fill()
+		ctx.stroke()
+		
+		// Рисуем имя пользователя
+		ctx.fillStyle = '#FF6B6B'
+		ctx.font = 'bold 12px sans-serif'
+		const textWidth = ctx.measureText(username).width
+		
+		// Фон для текста
+		ctx.fillRect(x + 16, y + 8, textWidth + 8, 18)
+		
+		// Текст
+		ctx.fillStyle = '#FFFFFF'
+		ctx.fillText(username, x + 20, y + 20)
+		
+		ctx.restore()
 	}
 	
 	const getMousePos = (e) => {
@@ -207,6 +284,11 @@ function WhiteboardCanvas({ teamId }) {
 	const handleMouseMove = (e) => {
 		e.preventDefault()
 		
+		const pos = getMousePos(e)
+		
+		// Отправляем позицию курсора
+		sendCursorPosition(pos.x, pos.y)
+		
 		if (isPanning) {
 			setPanOffset({
 				x: e.clientX - panStart.x,
@@ -217,34 +299,42 @@ function WhiteboardCanvas({ teamId }) {
 		
 		if (!isDrawing || !currentElement) return
 		
-		const pos = getMousePos(e)
+		let updated
 		
 		if (tool === 'pen' || tool === 'marker' || tool === 'eraser') {
-			setCurrentElement({
+			updated = {
 				...currentElement,
 				points: [...currentElement.points, pos],
-			})
+			}
+			setCurrentElement(updated)
+			sendLiveElement(updated)
 		} else if (tool === 'line') {
-			setCurrentElement({
+			updated = {
 				...currentElement,
 				endX: pos.x,
 				endY: pos.y,
-			})
+			}
+			setCurrentElement(updated)
+			sendLiveElement(updated)
 		} else if (tool === 'rectangle') {
-			setCurrentElement({
+			updated = {
 				...currentElement,
 				width: pos.x - currentElement.startX,
 				height: pos.y - currentElement.startY,
-			})
+			}
+			setCurrentElement(updated)
+			sendLiveElement(updated)
 		} else if (tool === 'circle') {
 			const radius = Math.sqrt(
 				Math.pow(pos.x - currentElement.x, 2) +
 				Math.pow(pos.y - currentElement.y, 2)
 			)
-			setCurrentElement({
+			updated = {
 				...currentElement,
 				radius: radius,
-			})
+			}
+			setCurrentElement(updated)
+			sendLiveElement(updated)
 		} else if (tool === 'triangle') {
 			const centerX = currentElement.startX
 			const centerY = currentElement.startY
@@ -252,10 +342,12 @@ function WhiteboardCanvas({ teamId }) {
 			const bottomLeft = { x: centerX - (pos.x - centerX), y: centerY + (centerY - pos.y) }
 			const bottomRight = { x: pos.x, y: centerY + (centerY - pos.y) }
 			
-			setCurrentElement({
+			updated = {
 				...currentElement,
 				points: [top, bottomLeft, bottomRight],
-			})
+			}
+			setCurrentElement(updated)
+			sendLiveElement(updated)
 		}
 	}
 	
@@ -266,27 +358,10 @@ function WhiteboardCanvas({ teamId }) {
 		}
 		
 		if (currentElement) {
-			const newElements = [...elements, currentElement]
-			setElements(newElements)
-			setHistory([...history.slice(0, historyStep + 1), newElements])
-			setHistoryStep(historyStep + 1)
+			addElement(currentElement)
 			setCurrentElement(null)
 		}
 		setIsDrawing(false)
-	}
-	
-	const handleUndo = () => {
-		if (historyStep > 0) {
-			setHistoryStep(historyStep - 1)
-			setElements(history[historyStep - 1])
-		}
-	}
-	
-	const handleRedo = () => {
-		if (historyStep < history.length - 1) {
-			setHistoryStep(historyStep + 1)
-			setElements(history[historyStep + 1])
-		}
 	}
 	
 	const handleClear = () => {
@@ -294,10 +369,7 @@ function WhiteboardCanvas({ teamId }) {
 	}
 	
 	const confirmClear = () => {
-		const newElements = []
-		setElements(newElements)
-		setHistory([...history.slice(0, historyStep + 1), newElements])
-		setHistoryStep(historyStep + 1)
+		clear()
 		setShowClearModal(false)
 	}
 	
@@ -316,8 +388,8 @@ function WhiteboardCanvas({ teamId }) {
 			<div className="whiteboard__controls">
 				<button
 					className="whiteboard__control"
-					onClick={handleUndo}
-					disabled={historyStep === 0}
+					onClick={undo}
+					disabled={!canUndo}
 					title="Undo (Ctrl+Z)"
 				>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -328,8 +400,8 @@ function WhiteboardCanvas({ teamId }) {
 				
 				<button
 					className="whiteboard__control"
-					onClick={handleRedo}
-					disabled={historyStep >= history.length - 1}
+					onClick={redo}
+					disabled={!canRedo}
 					title="Redo (Ctrl+Y)"
 				>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

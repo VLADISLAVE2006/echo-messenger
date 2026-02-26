@@ -2,13 +2,15 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../../context/AuthContext'
 import toast from 'react-hot-toast'
 
-function ChatPanel({ teamId, teamData, chatId }) {
+function ChatPanel({ teamId, teamData, chatId, socket }) {
 	const { user } = useAuth()
 	const [messages, setMessages] = useState([])
 	const [newMessage, setNewMessage] = useState('')
+	const [typingUsers, setTypingUsers] = useState([])
 	const [loading, setLoading] = useState(false)
 	const messagesEndRef = useRef(null)
 	const inputRef = useRef(null)
+	const typingTimeoutRef = useRef(null)
 	
 	useEffect(() => {
 		if (chatId) {
@@ -19,6 +21,49 @@ function ChatPanel({ teamId, teamData, chatId }) {
 	useEffect(() => {
 		scrollToBottom()
 	}, [messages])
+	
+	// ⬇️ WEBSOCKET СОБЫТИЯ
+	useEffect(() => {
+		if (!socket?.socket || !chatId) {
+			console.log('⚠️ Socket or chatId not ready:', { hasSocket: !!socket?.socket, chatId })
+			return
+		}
+		
+		console.log('💬 Setting up chat socket listeners for chatId:', chatId)
+		
+		// Новое сообщение
+		const handleNewMessage = (data) => {
+			console.log('📨 NEW MESSAGE EVENT:', data)
+			if (data.chat_id === chatId) {
+				setMessages(prev => [...prev, data])
+				scrollToBottom()
+			}
+		}
+		
+		// Индикатор печати
+		const handleUserTyping = (data) => {
+			console.log('⌨️ TYPING EVENT:', data)
+			if (data.username !== user.username && data.chat_id === chatId) {
+				setTypingUsers(prev => {
+					if (data.is_typing && !prev.includes(data.username)) {
+						return [...prev, data.username]
+					} else if (!data.is_typing) {
+						return prev.filter(u => u !== data.username)
+					}
+					return prev
+				})
+			}
+		}
+		
+		socket.on('new_message', handleNewMessage)
+		socket.on('user_typing', handleUserTyping)
+		
+		return () => {
+			console.log('🧹 Cleaning up chat socket listeners')
+			socket.off('new_message', handleNewMessage)
+			socket.off('user_typing', handleUserTyping)
+		}
+	}, [socket?.socket, chatId, user.username])
 	
 	const scrollToBottom = () => {
 		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -57,56 +102,63 @@ function ChatPanel({ teamId, teamData, chatId }) {
 	const handleSendMessage = async (e) => {
 		e.preventDefault()
 		
-		if (!newMessage.trim() || !chatId) return
+		if (!newMessage.trim() || !chatId || !socket?.socket) return
 		
 		setLoading(true)
 		
 		try {
 			const password = localStorage.getItem('password')
 			
-			const response = await fetch('http://localhost:5000/api/messages', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					username: user.username,
-					password: password,
-					chat_id: chatId,
-					content: newMessage.trim(),
-				}),
+			console.log('📤 Sending message via WebSocket:', {
+				username: user.username,
+				teamId,
+				chatId,
+				content: newMessage.trim()
 			})
 			
-			if (response.ok) {
-				const data = await response.json()
-				
-				const serverTimestamp = data.created_at || new Date().toISOString()
-				
-				const message = {
-					id: data.message_id,
-					user_id: user.id,
-					username: user.username,
-					avatar: user.avatar, // ⬅️ Добавляем аватарку
-					content: newMessage.trim(),
-					created_at: serverTimestamp,
-				}
-				
-				setMessages([...messages, message])
-				setNewMessage('')
-				
-				setTimeout(() => {
-					inputRef.current?.focus()
-				}, 0)
-			} else {
-				const error = await response.json()
-				toast.error(error.error || 'Failed to send message')
+			// ⬇️ ОТПРАВКА ЧЕРЕЗ WEBSOCKET
+			socket.sendMessage(
+				user.username,
+				password,
+				parseInt(teamId),
+				chatId,
+				newMessage.trim()
+			)
+			
+			setNewMessage('')
+			
+			// Останавливаем индикатор печати
+			if (typingTimeoutRef.current) {
+				clearTimeout(typingTimeoutRef.current)
 			}
+			socket.sendTyping(user.username, parseInt(teamId), chatId, false)
+			
+			setTimeout(() => {
+				inputRef.current?.focus()
+			}, 0)
 		} catch (error) {
 			console.error('Error sending message:', error)
 			toast.error('Failed to send message')
 		} finally {
 			setLoading(false)
 		}
+	}
+	
+	const handleTyping = (e) => {
+		setNewMessage(e.target.value)
+		
+		if (!socket?.socket) return
+		
+		// Отправляем индикатор печати
+		if (typingTimeoutRef.current) {
+			clearTimeout(typingTimeoutRef.current)
+		}
+		
+		socket.sendTyping(user.username, parseInt(teamId), chatId, true)
+		
+		typingTimeoutRef.current = setTimeout(() => {
+			socket.sendTyping(user.username, parseInt(teamId), chatId, false)
+		}, 1000)
 	}
 	
 	const formatTime = (timestamp) => {
@@ -152,14 +204,11 @@ function ChatPanel({ teamId, teamData, chatId }) {
 		return colors[Math.abs(hash) % colors.length]
 	}
 	
-	// Функция для получения аватарки (из user или teamData.members)
 	const getMessageAvatar = (message) => {
-		// Если это текущий пользователь
 		if (message.user_id === user.id || message.username === user.username) {
 			return user.avatar
 		}
 		
-		// Ищем в членах команды
 		const member = teamData?.members?.find(m => m.username === message.username)
 		return member?.avatar || message.avatar
 	}
@@ -209,7 +258,6 @@ function ChatPanel({ teamId, teamData, chatId }) {
 												alt={message.username}
 												className="chat-message__avatar-img"
 												onError={(e) => {
-													// Fallback на placeholder если картинка не загрузилась
 													e.target.style.display = 'none'
 													e.target.nextElementSibling.style.display = 'flex'
 												}}
@@ -240,12 +288,26 @@ function ChatPanel({ teamId, teamData, chatId }) {
 				)}
 			</div>
 			
+			{/* ⬇️ ИНДИКАТОР ПЕЧАТИ */}
+			{typingUsers.length > 0 && (
+				<div className="chat-panel__typing">
+					<div className="chat-panel__typing-dots">
+						<span></span>
+						<span></span>
+						<span></span>
+					</div>
+					<span className="chat-panel__typing-text">
+            {typingUsers.join(', ')} {typingUsers.length === 1 ? 'печатает' : 'печатают'}...
+          </span>
+				</div>
+			)}
+			
 			<form className="chat-panel__input" onSubmit={handleSendMessage}>
 				<input
 					ref={inputRef}
 					type="text"
 					value={newMessage}
-					onChange={(e) => setNewMessage(e.target.value)}
+					onChange={handleTyping}
 					onKeyDown={(e) => {
 						if (e.key === ' ') {
 							e.stopPropagation()
