@@ -81,7 +81,7 @@ function TimerWidget({ teamId, isPinned, onTogglePin }) {
 						<circle cx="12" cy="12" r="10"/>
 						<polyline points="12 6 12 12 16 14"/>
 					</svg>
-					Timer
+					Таймер
 				</h3>
 				<button
 					className={`widget__pin ${isPinned ? 'widget__pin--active' : ''}`}
@@ -119,18 +119,18 @@ function TimerWidget({ teamId, isPinned, onTogglePin }) {
 				<div className="countdown-widget__controls">
 					{isEditing ? (
 						<Button variant="primary" onClick={startTimer}>
-							Start Timer
+							Начать
 						</Button>
 					) : (
 						<>
 							<Button variant="primary" onClick={isActive ? pauseTimer : startTimer}>
-								{isActive ? 'Pause' : 'Start'}
+								{isActive ? 'Пауза' : 'Начать'}
 							</Button>
 							<Button variant="secondary" onClick={resetTimer}>
-								Reset
+								Очистить
 							</Button>
 							<Button variant="ghost" onClick={() => setIsEditing(true)} disabled={isActive}>
-								Edit
+								Редактировать
 							</Button>
 						</>
 					)}

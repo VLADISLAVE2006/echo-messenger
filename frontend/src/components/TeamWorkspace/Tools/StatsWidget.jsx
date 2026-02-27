@@ -146,7 +146,7 @@ function StatsWidget({ teamId, teamData, socket, isPinned, onTogglePin }) {
 	
 	const statItems = [
 		{
-			label: 'Total Members',
+			label: 'Всего участников',
 			value: stats.totalMembers,
 			icon: (
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -159,7 +159,7 @@ function StatsWidget({ teamId, teamData, socket, isPinned, onTogglePin }) {
 			color: 'blue',
 		},
 		{
-			label: 'Online Now',
+			label: 'Сейчас онлайн',
 			value: stats.onlineMembers,
 			icon: (
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -171,7 +171,7 @@ function StatsWidget({ teamId, teamData, socket, isPinned, onTogglePin }) {
 			color: 'green',
 		},
 		{
-			label: 'Total Messages',
+			label: 'Сообщений',
 			value: stats.totalMessages,
 			icon: (
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -181,7 +181,7 @@ function StatsWidget({ teamId, teamData, socket, isPinned, onTogglePin }) {
 			color: 'purple',
 		},
 		{
-			label: 'Today',
+			label: 'Активность сегодня',
 			value: stats.todayMessages,
 			icon: (
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -201,7 +201,7 @@ function StatsWidget({ teamId, teamData, socket, isPinned, onTogglePin }) {
 						<line x1="12" y1="20" x2="12" y2="4"/>
 						<line x1="6" y1="20" x2="6" y2="14"/>
 					</svg>
-					Team Stats
+					Статистика команды
 				</h3>
 				<button
 					className={`widget__pin ${isPinned ? 'widget__pin--active' : ''}`}

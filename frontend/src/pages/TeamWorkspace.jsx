@@ -153,7 +153,7 @@ function TeamWorkspace() {
 	if (loading) {
 		return (
 			<div className="team-workspace-loading">
-				<Loading message="Loading team workspace..." />
+				<Loading message="Загрузка команды..." />
 			</div>
 		)
 	}
@@ -161,7 +161,7 @@ function TeamWorkspace() {
 	if (!teamData) {
 		return (
 			<div className="team-workspace-loading">
-				<Loading message="Team not found..." />
+				<Loading message="Команда не найдена..." />
 			</div>
 		)
 	}
@@ -175,7 +175,7 @@ function TeamWorkspace() {
 							<line x1="19" y1="12" x2="5" y2="12"/>
 							<polyline points="12 19 5 12 12 5"/>
 						</svg>
-						Back to Teams
+						На главную
 					</button>
 					<h1 className="team-header__title">{teamData.name}</h1>
 				</div>
@@ -191,7 +191,7 @@ function TeamWorkspace() {
 								<line x1="18" y1="20" x2="18" y2="4"/>
 								<line x1="6" y1="20" x2="6" y2="16"/>
 							</svg>
-							Create Poll
+							Создать голосование
 						</Button>
 					)}
 					
@@ -203,7 +203,7 @@ function TeamWorkspace() {
 							<circle cx="12" cy="12" r="3"/>
 							<path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
 						</svg>
-						Settings
+						Настройки
 					</Button>
 				</div>
 			</div>
@@ -225,19 +225,19 @@ function TeamWorkspace() {
 							className={`team-workspace-layout__tab ${activeTab === 'whiteboard' ? 'team-workspace-layout__tab--active' : ''}`}
 							onClick={() => setActiveTab('whiteboard')}
 						>
-							Whiteboard
+							Доска
 						</button>
 						<button
 							className={`team-workspace-layout__tab ${activeTab === 'tools' ? 'team-workspace-layout__tab--active' : ''}`}
 							onClick={() => setActiveTab('tools')}
 						>
-							Tools
+							Виджеты
 						</button>
 						<button
 							className={`team-workspace-layout__tab ${activeTab === 'members' ? 'team-workspace-layout__tab--active' : ''}`}
 							onClick={() => setActiveTab('members')}
 						>
-							Members
+							Участники
 						</button>
 					</div>
 					

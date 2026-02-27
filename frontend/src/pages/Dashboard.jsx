@@ -107,7 +107,7 @@ function Dashboard() {
 	if (loading) {
 		return (
 			<Layout>
-				<Loading message="Loading teams..." />
+				<Loading message="Загрузка команд..." />
 			</Layout>
 		)
 	}

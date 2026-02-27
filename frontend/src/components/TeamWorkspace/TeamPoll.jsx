@@ -145,7 +145,7 @@ function TeamPoll({ teamId, socket, activePoll, onClosePoll, isAdmin }) {
 						<line x1="18" y1="20" x2="18" y2="4"/>
 						<line x1="6" y1="20" x2="6" y2="16"/>
 					</svg>
-					<span>Active Poll</span>
+					<span>Активное голосование</span>
 				</div>
 				{
 					<button className="team-poll-widget__close" onClick={handleClosePoll}>
@@ -160,7 +160,7 @@ function TeamPoll({ teamId, socket, activePoll, onClosePoll, isAdmin }) {
 			<div className="team-poll-widget__content">
 				<h3 className="team-poll-widget__question">{pollData.question}</h3>
 				<p className="team-poll-widget__meta">
-					by {pollData.created_by} • {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}
+					by {pollData.created_by} • {totalVotes} {totalVotes === 1 ? 'голос' : 'голоса'}
 				</p>
 				
 				<div className="team-poll-widget__options">

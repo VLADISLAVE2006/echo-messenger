@@ -232,7 +232,7 @@ function ChatPanel({ teamId, teamData, chatId, socket }) {
 	return (
 		<div className="chat-panel">
 			<div className="chat-panel__header">
-				<h3 className="chat-panel__title">Team Chat</h3>
+				<h3 className="chat-panel__title">Чат команды</h3>
 			</div>
 			
 			<div className="chat-panel__messages">
@@ -317,7 +317,7 @@ function ChatPanel({ teamId, teamData, chatId, socket }) {
 							handleSendMessage(e)
 						}
 					}}
-					placeholder="Type a message..."
+					placeholder="Написать сообщение..."
 					className="chat-panel__input-field"
 					disabled={loading}
 					autoComplete="off"

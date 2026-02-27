@@ -6,7 +6,8 @@ import toast from 'react-hot-toast'
 function MembersList({ teamId, teamData }) {
 	const { user } = useAuth()
 	const [requests, setRequests] = useState([])
-	const [activeTab, setActiveTab] = useState('members') // 'members' или 'requests'
+	const [activeTab, setActiveTab] = useState('members')
+	const [editingMember, setEditingMember] = useState(null)
 	
 	const isAdmin = teamData.members?.some(
 		m => m.username === user.username && (m.roles?.includes('Admin') || m.roles?.includes('Создатель'))
@@ -93,12 +94,48 @@ function MembersList({ teamId, teamData }) {
 			toast.error('Failed to reject')
 		}
 	}
+	const openEditRoles = (member) => {
+		setEditingMember(member)
+	}
+	
+	const handleChangeRole = async (newRole) => {
+		try {
+			const password = localStorage.getItem('password')
+			
+			const response = await fetch(
+				`http://localhost:5000/api/teams/${teamId}/members/${editingMember.id}/role`,
+				{
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						username: user.username,
+						password,
+						role: newRole,
+					}),
+				}
+			)
+			
+			if (response.ok) {
+				toast.success('Роль обновлена')
+				setEditingMember(null)
+				window.location.reload() // временно для обновления данных
+			} else {
+				const error = await response.json()
+				toast.error(error.error || 'Ошибка обновления роли')
+			}
+		} catch (err) {
+			console.error(err)
+			toast.error('Ошибка сервера')
+		}
+	}
 	
 	return (
 		<div className="members-list">
 			<div className="members-list__header">
-				<h2 className="members-list__title">Team Members</h2>
-				<div className="members-list__count">{teamData.members?.length || 0} members</div>
+				<h2 className="members-list__title">Участники команды</h2>
+				<div className="members-list__count">{teamData.members?.length || 0} в группе</div>
 			</div>
 			
 			{/* ⬇️ ДОБАВЬ табы если админ */}
@@ -108,13 +145,13 @@ function MembersList({ teamId, teamData }) {
 						className={`members-list__tab ${activeTab === 'members' ? 'members-list__tab--active' : ''}`}
 						onClick={() => setActiveTab('members')}
 					>
-						Members ({teamData.members?.length || 0})
+						Участники ({teamData.members?.length || 0})
 					</button>
 					<button
 						className={`members-list__tab ${activeTab === 'requests' ? 'members-list__tab--active' : ''}`}
 						onClick={() => setActiveTab('requests')}
 					>
-						Join Requests ({requests.length})
+						Запросы на вход ({requests.length})
 					</button>
 				</div>
 			)}
@@ -147,6 +184,16 @@ function MembersList({ teamId, teamData }) {
 										</div>
 									)}
 								</div>
+								{isAdmin && member.username !== user.username && (
+									<div className="member-card__actions">
+										<Button
+											variant="ghost"
+											onClick={() => openEditRoles(member)}
+										>
+											Редактировать роли
+										</Button>
+									</div>
+								)}
 							</div>
 						))}
 					</div>
@@ -154,7 +201,7 @@ function MembersList({ teamId, teamData }) {
 					<div className="requests-list">
 						{requests.length === 0 ? (
 							<div className="requests-list__empty">
-								<p>No pending join requests</p>
+								<p>Нет новых запросов</p>
 							</div>
 						) : (
 							requests.map((request) => (
@@ -172,7 +219,7 @@ function MembersList({ teamId, teamData }) {
 										<div className="request-card__info">
 											<h3 className="request-card__name">{request.username}</h3>
 											<p className="request-card__date">
-												Requested {new Date(request.created_at).toLocaleDateString()}
+												Запрошено: {new Date(request.created_at).toLocaleDateString()}
 											</p>
 										</div>
 									</div>
@@ -182,13 +229,13 @@ function MembersList({ teamId, teamData }) {
 											variant="primary"
 											onClick={() => handleApproveRequest(request.id)}
 										>
-											Approve
+											Добавить
 										</Button>
 										<Button
 											variant="ghost"
 											onClick={() => handleRejectRequest(request.id)}
 										>
-											Reject
+											Отклонить
 										</Button>
 									</div>
 								</div>
@@ -197,6 +244,48 @@ function MembersList({ teamId, teamData }) {
 					</div>
 				)}
 			</div>
+			{editingMember && (
+				<div className="edit-roles-overlay">
+					<div className="edit-roles-modal">
+						<h3>Изменение роли</h3>
+						
+						<p>
+							Пользователь: <b>{editingMember.username}</b>
+						</p>
+						
+						<p>
+							Текущая роль: <b>{editingMember.roles?.includes('Admin') ? 'Admin' : 'Участник'}</b>
+						</p>
+						
+						<div className="edit-roles-actions">
+							{!editingMember.roles?.includes('Admin') && (
+								<Button
+									variant="primary"
+									onClick={() => handleChangeRole('Admin')}
+								>
+									Сделать админом
+								</Button>
+							)}
+							
+							{editingMember.roles?.includes('Admin') && (
+								<Button
+									variant="secondary"
+									onClick={() => handleChangeRole('Member')}
+								>
+									Сделать участником
+								</Button>
+							)}
+							
+							<Button
+								variant="ghost"
+								onClick={() => setEditingMember(null)}
+							>
+								Отмена
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	)
 }

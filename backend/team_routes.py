@@ -288,10 +288,7 @@ def get_team(team_id):
 
 @team_bp.route('/teams/<int:team_id>/members/<int:user_id>/roles', methods=['PUT', 'OPTIONS'])
 def update_member_roles(team_id, user_id):
-    """
-    Обновляет роли участника команды.
-    Защищает роль Admin у создателя команды от удаления.
-    """
+
     if request.method == 'OPTIONS':
         return '', 200
 
@@ -311,62 +308,58 @@ def update_member_roles(team_id, user_id):
         return jsonify({'error': 'Invalid credentials'}), 401
 
     with get_db() as conn:
-        # Получаем команду и проверяем создателя
-        team = conn.execute(
-            'SELECT created_by FROM teams WHERE id = ?',
-            (team_id,)
-        ).fetchone()
 
-        if not team:
-            return jsonify({'error': 'Team not found'}), 404
-
-        # Проверяем, что текущий пользователь является админом команды
+        # Проверяем что текущий пользователь — Admin
         if not is_team_admin(conn, team_id, user['id']):
-            return jsonify({'error': 'Admin rights required'}), 403
+            return jsonify({'error': 'Only Admin can change roles'}), 403
 
-        # Проверяем, что целевой пользователь является участником команды
+        # Проверяем что участник существует
         member = conn.execute(
             'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
             (team_id, user_id)
         ).fetchone()
+
         if not member:
-            return jsonify({'error': 'User is not a member of this team'}), 404
+            return jsonify({'error': 'User not in team'}), 404
 
-        # ЗАЩИТА: Если это создатель команды, всегда добавляем Admin в роли
-        is_creator = (user_id == team['created_by'])
-        if is_creator and 'Admin' not in new_roles:
-            new_roles.append('Admin')
-
-        # Получаем текущие роли
-        current_roles = conn.execute(
-            'SELECT role_name FROM team_roles WHERE team_id = ? AND user_id = ?',
-            (team_id, user_id)
+        # Получаем всех текущих админов
+        current_admins = conn.execute(
+            'SELECT user_id FROM team_roles WHERE team_id = ? AND role_name = ?',
+            (team_id, 'Admin')
         ).fetchall()
-        current_role_names = [r['role_name'] for r in current_roles]
 
-        # Удаляем роли, которых нет в новом списке
-        for role in current_role_names:
-            if role not in new_roles:
-                # ЗАЩИТА: Никогда не удаляем Admin у создателя
-                if is_creator and role == 'Admin':
-                    continue
+        current_admin_ids = [a['user_id'] for a in current_admins]
 
-                conn.execute(
-                    'DELETE FROM team_roles WHERE team_id = ? AND user_id = ? AND role_name = ?',
-                    (team_id, user_id, role)
-                )
+        # ===== ЕСЛИ назначаем Admin =====
+        if 'Admin' in new_roles:
 
-        # Добавляем новые роли
-        for role in new_roles:
-            if role not in current_role_names:
-                conn.execute(
-                    'INSERT INTO team_roles (team_id, user_id, role_name) VALUES (?, ?, ?)',
-                    (team_id, user_id, role)
-                )
+            # Удаляем Admin у всех остальных
+            conn.execute(
+                'DELETE FROM team_roles WHERE team_id = ? AND role_name = ?',
+                (team_id, 'Admin')
+            )
+
+            # Назначаем нового
+            conn.execute(
+                'INSERT INTO team_roles (team_id, user_id, role_name) VALUES (?, ?, ?)',
+                (team_id, user_id, 'Admin')
+            )
+
+        else:
+            # ===== ЕСЛИ убираем Admin =====
+
+            # Нельзя убрать последнего админа
+            if user_id in current_admin_ids and len(current_admin_ids) == 1:
+                return jsonify({'error': 'Team must have at least one Admin'}), 400
+
+            conn.execute(
+                'DELETE FROM team_roles WHERE team_id = ? AND user_id = ? AND role_name = ?',
+                (team_id, user_id, 'Admin')
+            )
 
         conn.commit()
 
-    return jsonify({'message': 'Roles updated successfully'}), 200
+    return jsonify({'message': 'Role updated successfully'}), 200
 
 # ---- ЗАЯВКИ НА ВСТУПЛЕНИЕ (JOIN REQUESTS) ----
 

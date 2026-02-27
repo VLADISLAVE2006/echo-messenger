@@ -16,15 +16,15 @@ function ToolSettings({ tool, color, setColor, lineWidth, setLineWidth, position
 	
 	const getToolName = () => {
 		const names = {
-			pen: 'Pen',
-			marker: 'Marker',
-			eraser: 'Eraser',
-			line: 'Line',
-			rectangle: 'Rectangle',
-			circle: 'Circle',
-			triangle: 'Triangle',
+			pen: 'Ручка',
+			marker: 'Маркер',
+			eraser: 'Ластик',
+			line: 'Линия',
+			rectangle: 'Квадрат',
+			circle: 'Круг',
+			triangle: 'Треугольник',
 		}
-		return names[tool] || 'Tool'
+		return names[tool] || 'Инструмент'
 	}
 	
 	const showColorPicker = ['pen', 'marker'].includes(tool)
@@ -39,7 +39,7 @@ function ToolSettings({ tool, color, setColor, lineWidth, setLineWidth, position
 			}}
 		>
 			<div className="tool-settings__header">
-				<h4 className="tool-settings__title">{getToolName()} Settings</h4>
+				<h4 className="tool-settings__title">{getToolName()} Настройки</h4>
 				<button className="tool-settings__close" onClick={onClose}>
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 						<line x1="18" y1="6" x2="6" y2="18"/>
@@ -50,7 +50,7 @@ function ToolSettings({ tool, color, setColor, lineWidth, setLineWidth, position
 			
 			{showColorPicker && (
 				<div className="tool-settings__section">
-					<label className="tool-settings__label">Color</label>
+					<label className="tool-settings__label">Цвет</label>
 					<div className="tool-settings__color-picker">
 						<input
 							type="color"
@@ -76,7 +76,7 @@ function ToolSettings({ tool, color, setColor, lineWidth, setLineWidth, position
 			
 			<div className="tool-settings__section">
 				<label className="tool-settings__label">
-					{tool === 'eraser' ? 'Eraser Size' : 'Line Width'}: {lineWidth}px
+					{tool === 'eraser' ? 'Размер ластика' : 'Толщина линии'}: {lineWidth}px
 				</label>
 				<input
 					type="range"

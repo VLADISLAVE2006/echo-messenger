@@ -8,7 +8,7 @@ function TeamHeader({ teamName, onBack, onOpenSettings }) {
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 						<path d="M19 12H5M12 19l-7-7 7-7"/>
 					</svg>
-					<span>Back to Teams</span>
+					<span>Обратно к команде</span>
 				</button>
 				<h1 className="team-header__title">{teamName}</h1>
 			</div>
@@ -19,7 +19,7 @@ function TeamHeader({ teamName, onBack, onOpenSettings }) {
 						<circle cx="12" cy="12" r="3"/>
 						<path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
 					</svg>
-					Settings
+					Настройки
 				</Button>
 			</div>
 		</div>
