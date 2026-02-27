@@ -3,7 +3,7 @@ import TimerWidget from './TimerWidget'
 import TodoWidget from './TodoWidget'
 import StatsWidget from './StatsWidget'
 
-function ToolsGrid({ teamId, teamData }) {
+function ToolsGrid({ teamId, teamData, socket }) {
 	const [pinnedWidgets, setPinnedWidgets] = useState({
 		stats: false,
 		timer: false,
@@ -36,6 +36,7 @@ function ToolsGrid({ teamId, teamData }) {
 				key="stats"
 				teamId={teamId}
 				teamData={teamData}
+				socket={socket}
 				isPinned={pinnedWidgets.stats}
 				onTogglePin={() => togglePin('stats')}
 			/>,

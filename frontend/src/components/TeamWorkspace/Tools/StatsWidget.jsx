@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
-function StatsWidget({ teamId, teamData, isPinned, onTogglePin }) {
+function StatsWidget({ teamId, teamData, socket, isPinned, onTogglePin }) {
 	const [stats, setStats] = useState({
 		totalMembers: 0,
 		onlineMembers: 0,
@@ -8,16 +8,141 @@ function StatsWidget({ teamId, teamData, isPinned, onTogglePin }) {
 		todayMessages: 0,
 	})
 	
+	const onlineUsersRef = useRef(new Set())
+	
+	// ===== INIT MEMBERS =====
 	useEffect(() => {
 		if (teamData) {
-			setStats({
+			setStats(prev => ({
+				...prev,
 				totalMembers: teamData.members?.length || 0,
-				onlineMembers: 1, // Текущий пользователь всегда онлайн
-				totalMessages: 0, // Будет реализовано позже
-				todayMessages: 0, // Будет реализовано позже
-			})
+			}))
 		}
 	}, [teamData])
+	
+	// ===== REALTIME SOCKET =====
+	useEffect(() => {
+		if (!socket || !teamId) return
+		
+		// ===== JOINED TEAM (самый надёжный источник онлайн)
+		const handleJoinedTeam = (data) => {
+			if (parseInt(data.team_id) !== parseInt(teamId)) return
+			
+			const set = new Set(data.online_users || [])
+			onlineUsersRef.current = set
+			
+			setStats(prev => ({
+				...prev,
+				onlineMembers: set.size,
+			}))
+		}
+		
+		// ===== ONLINE LIST (если вручную запрашивается)
+		const handleOnlineList = (data) => {
+			if (parseInt(data.team_id) !== parseInt(teamId)) return
+			
+			const set = new Set(data.online_users || [])
+			onlineUsersRef.current = set
+			
+			setStats(prev => ({
+				...prev,
+				onlineMembers: set.size,
+			}))
+		}
+		
+		const handleUserOnline = (data) => {
+			if (parseInt(data.team_id) !== parseInt(teamId)) return
+			
+			onlineUsersRef.current.add(data.user_id)
+			
+			setStats(prev => ({
+				...prev,
+				onlineMembers: onlineUsersRef.current.size,
+			}))
+		}
+		
+		const handleUserOffline = (data) => {
+			if (parseInt(data.team_id) !== parseInt(teamId)) return
+			
+			onlineUsersRef.current.delete(data.user_id)
+			
+			setStats(prev => ({
+				...prev,
+				onlineMembers: onlineUsersRef.current.size,
+			}))
+		}
+		
+		// ===== NEW MESSAGE
+		const handleNewMessage = (message) => {
+			if (!message) return
+			
+			const today = new Date().toDateString()
+			const messageDate = message.created_at
+				? new Date(message.created_at).toDateString()
+				: today
+			
+			setStats(prev => ({
+				...prev,
+				totalMessages: prev.totalMessages + 1,
+				todayMessages:
+					messageDate === today
+						? prev.todayMessages + 1
+						: prev.todayMessages,
+			}))
+		}
+		
+		// ===== SUBSCRIBE
+		socket.on('joined_team', handleJoinedTeam)
+		socket.on('online_users_list', handleOnlineList)
+		socket.on('user_online', handleUserOnline)
+		socket.on('user_offline', handleUserOffline)
+		socket.on('new_message', handleNewMessage)
+		
+		// Запросить онлайн после подписки
+		socket.getOnlineUsers(teamId)
+		
+		// ===== CLEANUP
+		return () => {
+			socket.off('joined_team', handleJoinedTeam)
+			socket.off('online_users_list', handleOnlineList)
+			socket.off('user_online', handleUserOnline)
+			socket.off('user_offline', handleUserOffline)
+			socket.off('new_message', handleNewMessage)
+		}
+	}, [socket, teamId])
+	
+	// ===== INITIAL MESSAGE COUNT =====
+	useEffect(() => {
+		if (!teamId) return
+		
+		const username = localStorage.getItem('username')
+		const password = localStorage.getItem('password')
+		
+		if (!username || !password) return
+		
+		fetch(`http://localhost:5000/api/teams/${teamId}/stats?username=${username}&password=${password}`)
+			.then(res => {
+				if (!res.ok) {
+					throw new Error('Failed to fetch stats')
+				}
+				return res.json()
+			})
+			.then(data => {
+				setStats(prev => ({
+					...prev,
+					totalMessages: data.total_messages || 0,
+					todayMessages: data.today_messages || 0,
+				}))
+			})
+			.catch(err => {
+				console.error('Failed to load stats:', err)
+				setStats(prev => ({
+					...prev,
+					totalMessages: 0,
+					todayMessages: 0,
+				}))
+			})
+	}, [teamId])
 	
 	const statItems = [
 		{

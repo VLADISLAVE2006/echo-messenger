@@ -6,18 +6,19 @@ class SocketService {
 	constructor() {
 		this.socket = null
 		this.connected = false
+		this.currentTeamId = null
 	}
 	
 	connect() {
-		if (this.socket?.connected) {
-			console.log('🔄 Socket already connected:', this.socket.id)
+		if (this.socket) {
+			console.log('🔄 Reusing existing socket')
 			return this.socket
 		}
 		
 		console.log('🔌 Creating new socket connection to:', SOCKET_URL)
 		
 		this.socket = io(SOCKET_URL, {
-			transports: ['websocket', 'polling'],
+			transports: ['websocket'],
 			autoConnect: true,
 		})
 		
@@ -26,17 +27,9 @@ class SocketService {
 			this.connected = true
 		})
 		
-		this.socket.on('connect_error', (error) => {
-			console.error('❌ Socket connection error:', error)
-		})
-		
 		this.socket.on('disconnect', (reason) => {
 			console.log('❌ Socket disconnected:', reason)
 			this.connected = false
-		})
-		
-		this.socket.on('error', (error) => {
-			console.error('⚠️ Socket error:', error)
 		})
 		
 		return this.socket
@@ -72,12 +65,37 @@ class SocketService {
 	
 	// Team methods
 	joinTeam(username, password, teamId) {
-		console.log('📤 joinTeam called:', { username, teamId, connected: this.socket?.connected })
-		this.emit('join_team', { username, password, team_id: teamId })
+		if (!this.socket?.connected) return
+		
+		// 🚫 Если уже в этой команде — ничего не делаем
+		if (this.currentTeamId === teamId) {
+			console.log('⚡ Already joined this team, skipping')
+			return
+		}
+		
+		console.log('📤 joinTeam called:', { username, teamId })
+		
+		this.socket.emit('join_team', {
+			username,
+			password,
+			team_id: teamId
+		})
+		
+		this.currentTeamId = teamId
 	}
 	
 	leaveTeam(username, password, teamId) {
-		this.emit('leave_team', { username, password, team_id: teamId })
+		if (!this.socket?.connected) return
+		
+		this.socket.emit('leave_team', {
+			username,
+			password,
+			team_id: teamId
+		})
+		
+		if (this.currentTeamId === teamId) {
+			this.currentTeamId = null
+		}
 	}
 	
 	// Chat methods

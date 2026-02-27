@@ -27,19 +27,21 @@ export const useWhiteboard = (teamId, user, socket) => {
 			socket.joinWhiteboard(user.username, password, parseInt(teamId))
 		}
 		
-		// Финальный элемент (когда пользователь отпустил мышь)
+		// Финальный элемент
 		const handleWhiteboardUpdate = (data) => {
-			console.log('🖌️ WHITEBOARD UPDATE:', data)
 			if (data.username !== user.username) {
 				setElements(prev => {
 					const newElements = [...prev, data.element]
+					
+					setHistory(historyPrev => [
+						...historyPrev.slice(0, historyStep + 1),
+						newElements
+					])
+					setHistoryStep(prevStep => prevStep + 1)
+					
 					return newElements
 				})
 				
-				setHistory(prev => [...prev, [...elements, data.element]])
-				setHistoryStep(prev => prev + 1)
-				
-				// Удаляем live элемент этого пользователя
 				setLiveElements(prev => {
 					const updated = { ...prev }
 					delete updated[data.username]
@@ -48,7 +50,7 @@ export const useWhiteboard = (teamId, user, socket) => {
 			}
 		}
 		
-		// Live рисование (в процессе)
+		// Live рисование
 		const handleWhiteboardLiveDrawing = (data) => {
 			console.log('✏️ LIVE DRAWING:', data.username)
 			if (data.username !== user.username) {
@@ -67,7 +69,6 @@ export const useWhiteboard = (teamId, user, socket) => {
 					[data.username]: { x: data.x, y: data.y }
 				}))
 				
-				// Удаляем курсор через 2 секунды неактивности
 				setTimeout(() => {
 					setCursors(prev => {
 						const updated = { ...prev }
@@ -80,7 +81,7 @@ export const useWhiteboard = (teamId, user, socket) => {
 			}
 		}
 		
-		// Whiteboard был очищен
+		// ⬇️ ДОБАВЬ: Whiteboard был очищен
 		const handleWhiteboardCleared = (data) => {
 			console.log('🗑️ WHITEBOARD CLEARED by:', data.username)
 			if (data.username !== user.username) {
@@ -92,10 +93,19 @@ export const useWhiteboard = (teamId, user, socket) => {
 			}
 		}
 		
+		const handleWhiteboardSync = (data) => {
+			if (data.username !== user.username) {
+				setElements(data.elements)
+				setHistory([data.elements])
+				setHistoryStep(0)
+			}
+		}
+		
 		socket.on('whiteboard_update', handleWhiteboardUpdate)
 		socket.on('whiteboard_live_drawing', handleWhiteboardLiveDrawing)
 		socket.on('whiteboard_cursor_update', handleCursorUpdate)
 		socket.on('whiteboard_cleared', handleWhiteboardCleared)
+		socket.on('whiteboard_sync', handleWhiteboardSync)
 		
 		return () => {
 			console.log('🧹 Cleaning up whiteboard socket listeners')
@@ -104,6 +114,7 @@ export const useWhiteboard = (teamId, user, socket) => {
 			socket.off('whiteboard_live_drawing', handleWhiteboardLiveDrawing)
 			socket.off('whiteboard_cursor_update', handleCursorUpdate)
 			socket.off('whiteboard_cleared', handleWhiteboardCleared)
+			socket.off('whiteboard_sync', handleWhiteboardSync)
 		}
 	}, [socket?.socket, teamId, user.username])
 	
@@ -205,20 +216,40 @@ export const useWhiteboard = (teamId, user, socket) => {
 	const undo = () => {
 		if (historyStep > 0) {
 			const newStep = historyStep - 1
-			setHistoryStep(newStep)
 			const newElements = history[newStep]
+			
+			setHistoryStep(newStep)
 			setElements(newElements)
+			
 			saveWhiteboard(newElements)
+			
+			if (socket?.socket?.connected) {
+				socket.emit('whiteboard_sync', {
+					team_id: parseInt(teamId),
+					elements: newElements,
+					username: user.username,
+				})
+			}
 		}
 	}
 	
 	const redo = () => {
 		if (historyStep < history.length - 1) {
 			const newStep = historyStep + 1
-			setHistoryStep(newStep)
 			const newElements = history[newStep]
+			
+			setHistoryStep(newStep)
 			setElements(newElements)
+			
 			saveWhiteboard(newElements)
+			
+			if (socket?.socket?.connected) {
+				socket.emit('whiteboard_sync', {
+					team_id: parseInt(teamId),
+					elements: newElements,
+					username: user.username,
+				})
+			}
 		}
 	}
 	

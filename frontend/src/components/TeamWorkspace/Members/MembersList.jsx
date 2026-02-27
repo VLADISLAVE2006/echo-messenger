@@ -1,256 +1,203 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../../context/AuthContext'
-import toast from 'react-hot-toast'
-import Modal from '../../common/Modal'
 import Button from '../../common/Button'
-import Input from '../../common/Input'
+import toast from 'react-hot-toast'
 
 function MembersList({ teamId, teamData }) {
 	const { user } = useAuth()
-	const [selectedMember, setSelectedMember] = useState(null)
-	const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
+	const [requests, setRequests] = useState([])
+	const [activeTab, setActiveTab] = useState('members') // 'members' или 'requests'
 	
-	const members = teamData?.members || []
-	
-	const isAdmin = members?.some(
+	const isAdmin = teamData.members?.some(
 		m => m.username === user.username && (m.roles?.includes('Admin') || m.roles?.includes('Создатель'))
-	)
+	) || false
 	
-	const getAvatarLetter = (username) => {
-		return username?.charAt(0).toUpperCase() || 'U'
-	}
+	// Загружаем requests если админ
+	useEffect(() => {
+		if (isAdmin) {
+			loadRequests()
+		}
+	}, [teamId, isAdmin])
 	
-	const handleManageRoles = (member) => {
-		setSelectedMember(member)
-		setIsRoleModalOpen(true)
-	}
-	
-	return (
-		<div className="members-list">
-			<div className="members-list__header">
-				<h2 className="members-list__title">Team Members</h2>
-				<span className="members-list__count">{members.length} {members.length === 1 ? 'member' : 'members'}</span>
-			</div>
+	const loadRequests = async () => {
+		try {
+			const password = localStorage.getItem('password')
+			const params = new URLSearchParams({
+				username: user.username,
+				password: password,
+			})
 			
-			<div className="members-list__grid">
-				{members.map(member => {
-					// Показываем кнопку если:
-					// 1. Текущий пользователь админ
-					// 2. И это либо другой участник, либо сам админ (админ может редактировать свои роли)
-					const canManageRoles = isAdmin && (!member.roles?.includes('Admin') || member.username === user.username)
-					
-					return (
-						<div key={member.id} className="member-card">
-							<div className="member-card__avatar">
-								{member.avatar ? (
-									<img src={member.avatar} alt={member.username} className="member-card__avatar-img" />
-								) : (
-									<div className="member-card__avatar-placeholder">
-										{getAvatarLetter(member.username)}
-									</div>
-								)}
-								{member.is_online && (
-									<div className="member-card__online-indicator" />
-								)}
-							</div>
-							
-							<div className="member-card__info">
-								<h3 className="member-card__name">{member.username}</h3>
-								
-								<div className="member-card__roles">
-									{member.roles && member.roles.length > 0 ? (
-										member.roles.map((role, index) => (
-											<span key={index} className="member-card__role">
-                        {role}
-                      </span>
-										))
-									) : (
-										<span className="member-card__role member-card__role--empty">No roles</span>
-									)}
-								</div>
-								
-								{canManageRoles && (
-									<button
-										className="member-card__manage-btn"
-										onClick={() => handleManageRoles(member)}
-									>
-										Manage Roles
-									</button>
-								)}
-							</div>
-						</div>
-					)
-				})}
-			</div>
+			const response = await fetch(`http://localhost:5000/api/teams/${teamId}/requests?${params}`)
 			
-			{isRoleModalOpen && selectedMember && (
-				<ManageRolesModal
-					member={selectedMember}
-					teamId={teamId}
-					onClose={() => {
-						setIsRoleModalOpen(false)
-						setSelectedMember(null)
-					}}
-					onUpdate={() => {
-						window.location.reload()
-					}}
-				/>
-			)}
-		</div>
-	)
-}
-
-// Модалка для управления ролями
-function ManageRolesModal({ member, teamId, onClose, onUpdate }) {
-	const { user } = useAuth()
-	const [roles, setRoles] = useState(
-		member.roles?.filter(r => r !== 'Admin') || []
-	)
-	const [newRole, setNewRole] = useState('')
-	const [loading, setLoading] = useState(false)
-	
-	const handleAddRole = () => {
-		const trimmedRole = newRole.trim()
-		
-		if (!trimmedRole) {
-			toast.error('Role name cannot be empty')
-			return
-		}
-		
-		if (trimmedRole.length > 30) {
-			toast.error('Role name must be less than 30 characters')
-			return
-		}
-		
-		if (roles.includes(trimmedRole)) {
-			toast.error('This role already exists')
-			return
-		}
-		
-		setRoles([...roles, trimmedRole])
-		setNewRole('')
-	}
-	
-	const handleRemoveRole = (roleToRemove) => {
-		setRoles(roles.filter(role => role !== roleToRemove))
-	}
-	
-	const handleKeyPress = (e) => {
-		if (e.key === 'Enter') {
-			e.preventDefault()
-			handleAddRole()
+			if (response.ok) {
+				const data = await response.json()
+				setRequests(data.requests || [])
+			}
+		} catch (error) {
+			console.error('Error loading requests:', error)
 		}
 	}
 	
-	const handleSave = async () => {
-		setLoading(true)
-		
+	const handleApproveRequest = async (requestId) => {
 		try {
 			const password = localStorage.getItem('password')
 			
-			const response = await fetch(`http://localhost:5000/api/teams/${teamId}/members/${member.id}/roles`, {
-				method: 'PUT',
+			const response = await fetch(`http://localhost:5000/api/teams/${teamId}/requests/${requestId}/approve`, {
+				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
 					username: user.username,
 					password: password,
-					roles: roles,
 				}),
 			})
 			
 			if (response.ok) {
-				toast.success('Roles updated successfully!')
-				onUpdate()
-				onClose()
+				toast.success('Request approved!')
+				loadRequests() // Перезагружаем список
 			} else {
 				const error = await response.json()
-				toast.error(error.error || 'Failed to update roles')
+				toast.error(error.error || 'Failed to approve')
 			}
 		} catch (error) {
-			console.error('Error updating roles:', error)
-			toast.error('Failed to update roles')
-		} finally {
-			setLoading(false)
+			console.error('Error approving request:', error)
+			toast.error('Failed to approve')
+		}
+	}
+	
+	const handleRejectRequest = async (requestId) => {
+		try {
+			const password = localStorage.getItem('password')
+			
+			const response = await fetch(`http://localhost:5000/api/teams/${teamId}/requests/${requestId}/reject`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					username: user.username,
+					password: password,
+				}),
+			})
+			
+			if (response.ok) {
+				toast.success('Request rejected!')
+				loadRequests()
+			} else {
+				const error = await response.json()
+				toast.error(error.error || 'Failed to reject')
+			}
+		} catch (error) {
+			console.error('Error rejecting request:', error)
+			toast.error('Failed to reject')
 		}
 	}
 	
 	return (
-		<Modal title={`Manage Roles - ${member.username}`} onClose={onClose}>
-			<div className="manage-roles-modal">
-				<p className="manage-roles-modal__description">
-					Add custom roles for this team member. These are for display purposes only.
-				</p>
-				
-				<div className="manage-roles-modal__input-section">
-					<Input
-						type="text"
-						label="Add Role"
-						value={newRole}
-						onChange={(e) => setNewRole(e.target.value)}
-						onKeyPress={handleKeyPress}
-						placeholder="e.g. Frontend Developer, Team Lead..."
-						maxLength={30}
-					/>
-					<Button
-						type="button"
-						variant="secondary"
-						onClick={handleAddRole}
-						disabled={!newRole.trim()}
-					>
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-							<line x1="12" y1="5" x2="12" y2="19"/>
-							<line x1="5" y1="12" x2="19" y2="12"/>
-						</svg>
-						Add
-					</Button>
-				</div>
-				
-				{roles.length > 0 && (
-					<div className="manage-roles-modal__roles-list">
-						<label className="manage-roles-modal__roles-label">Current Roles:</label>
-						<div className="manage-roles-modal__roles">
-							{roles.map((role, index) => (
-								<div key={index} className="role-tag">
-									<span className="role-tag__text">{role}</span>
-									<button
-										type="button"
-										className="role-tag__remove"
-										onClick={() => handleRemoveRole(role)}
-									>
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-											<line x1="18" y1="6" x2="6" y2="18"/>
-											<line x1="6" y1="6" x2="18" y2="18"/>
-										</svg>
-									</button>
-								</div>
-							))}
-						</div>
-					</div>
-				)}
-				
-				{member.roles?.includes('Admin') && (
-					<div className="manage-roles-modal__notice">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-							<circle cx="12" cy="12" r="10"/>
-							<line x1="12" y1="16" x2="12" y2="12"/>
-							<line x1="12" y1="8" x2="12.01" y2="8"/>
-						</svg>
-						<span>Admin role cannot be removed</span>
-					</div>
-				)}
-				
-				<div className="modal__actions">
-					<Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
-						Cancel
-					</Button>
-					<Button type="button" variant="primary" onClick={handleSave} disabled={loading}>
-						{loading ? 'Saving...' : 'Save Roles'}
-					</Button>
-				</div>
+		<div className="members-list">
+			<div className="members-list__header">
+				<h2 className="members-list__title">Team Members</h2>
+				<div className="members-list__count">{teamData.members?.length || 0} members</div>
 			</div>
-		</Modal>
+			
+			{/* ⬇️ ДОБАВЬ табы если админ */}
+			{isAdmin && (
+				<div className="members-list__tabs">
+					<button
+						className={`members-list__tab ${activeTab === 'members' ? 'members-list__tab--active' : ''}`}
+						onClick={() => setActiveTab('members')}
+					>
+						Members ({teamData.members?.length || 0})
+					</button>
+					<button
+						className={`members-list__tab ${activeTab === 'requests' ? 'members-list__tab--active' : ''}`}
+						onClick={() => setActiveTab('requests')}
+					>
+						Join Requests ({requests.length})
+					</button>
+				</div>
+			)}
+			
+			<div className="members-list__content">
+				{activeTab === 'members' ? (
+					<div className="members-list__grid">
+						{teamData.members?.map((member) => (
+							<div key={member.id} className="member-card">
+								<div className="member-card__avatar">
+									{member.avatar ? (
+										<img src={member.avatar} alt={member.username} />
+									) : (
+										<div className="member-card__avatar-placeholder">
+											{member.username.charAt(0).toUpperCase()}
+										</div>
+									)}
+									{member.is_online && <div className="member-card__online-indicator" />}
+								</div>
+								
+								<div className="member-card__info">
+									<h3 className="member-card__name">{member.username}</h3>
+									{member.roles && member.roles.length > 0 && (
+										<div className="member-card__roles">
+											{member.roles.map((role, index) => (
+												<span key={index} className="member-card__role">
+                          {role}
+                        </span>
+											))}
+										</div>
+									)}
+								</div>
+							</div>
+						))}
+					</div>
+				) : (
+					<div className="requests-list">
+						{requests.length === 0 ? (
+							<div className="requests-list__empty">
+								<p>No pending join requests</p>
+							</div>
+						) : (
+							requests.map((request) => (
+								<div key={request.id} className="request-card">
+									<div className="request-card__user">
+										<div className="request-card__avatar">
+											{request.avatar ? (
+												<img src={request.avatar} alt={request.username} />
+											) : (
+												<div className="request-card__avatar-placeholder">
+													{request.username.charAt(0).toUpperCase()}
+												</div>
+											)}
+										</div>
+										<div className="request-card__info">
+											<h3 className="request-card__name">{request.username}</h3>
+											<p className="request-card__date">
+												Requested {new Date(request.created_at).toLocaleDateString()}
+											</p>
+										</div>
+									</div>
+									
+									<div className="request-card__actions">
+										<Button
+											variant="primary"
+											onClick={() => handleApproveRequest(request.id)}
+										>
+											Approve
+										</Button>
+										<Button
+											variant="ghost"
+											onClick={() => handleRejectRequest(request.id)}
+										>
+											Reject
+										</Button>
+									</div>
+								</div>
+							))
+						)}
+					</div>
+				)}
+			</div>
+		</div>
 	)
 }
 

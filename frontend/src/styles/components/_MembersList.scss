@@ -284,3 +284,113 @@
 		}
 	}
 }
+
+.members-list__tabs {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 24px;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.members-list__tab {
+	padding: 12px 16px;
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	font-weight: 500;
+	cursor: pointer;
+	border-bottom: 2px solid transparent;
+	transition: all 0.2s;
+	
+	&:hover {
+		color: var(--text-primary);
+	}
+	
+	&--active {
+		color: var(--primary-color);
+		border-bottom-color: var(--primary-color);
+	}
+}
+
+.requests-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.requests-list__empty {
+	text-align: center;
+	padding: 48px 24px;
+	color: var(--text-secondary);
+}
+
+.request-card {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 16px;
+	background: var(--surface-color);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	transition: all 0.2s;
+	
+	&:hover {
+		border-color: var(--primary-color);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	}
+}
+
+.request-card__user {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.request-card__avatar {
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	overflow: hidden;
+	
+	img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+}
+
+.request-card__avatar-placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--primary-gradient);
+	color: white;
+	font-weight: 600;
+	font-size: 20px;
+}
+
+.request-card__info {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.request-card__name {
+	font-weight: 600;
+	font-size: 16px;
+	color: var(--text-primary);
+	margin: 0;
+}
+
+.request-card__date {
+	font-size: 14px;
+	color: var(--text-secondary);
+	margin: 0;
+}
+
+.request-card__actions {
+	display: flex;
+	gap: 8px;
+}

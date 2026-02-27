@@ -5,7 +5,7 @@ import Modal from '../common/Modal'
 import Button from '../common/Button'
 import Input from '../common/Input'
 
-function CreatePollModal({ onClose, onPollCreated }) {
+function CreatePollModal({ teamId, onClose, onPollCreated }) {
 	const { user } = useAuth()
 	const [question, setQuestion] = useState('')
 	const [options, setOptions] =   useState(['', ''])
@@ -28,7 +28,7 @@ function CreatePollModal({ onClose, onPollCreated }) {
 		setOptions(newOptions)
 	}
 	
-	const createPoll = () => {
+	const createPoll = async () => {
 		if (!question.trim()) {
 			toast.error('Please enter a question')
 			return
@@ -40,20 +40,42 @@ function CreatePollModal({ onClose, onPollCreated }) {
 			return
 		}
 		
-		const poll = {
-			id: Date.now(),
-			question: question.trim(),
-			options: validOptions.map((text, index) => ({
-				id: index,
-				text,
-				votes: 0,
-			})),
-			createdBy: user.username,
-			createdAt: new Date().toISOString(),
+		try {
+			const password = localStorage.getItem('password')
+			
+			const response = await fetch(
+				`http://localhost:5000/api/teams/${teamId}/polls`,
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						username: user.username,
+						password,
+						question: question.trim(),
+						options: validOptions,
+					}),
+				}
+			)
+			
+			if (!response.ok) {
+				const err = await response.json()
+				toast.error(err.error || 'Failed to create poll')
+				return
+			}
+			
+			const data = await response.json()
+			
+			console.log('SERVER POLL:', data.poll)
+			
+			onPollCreated(data.poll) // ← ВАЖНО
+			onClose()
+			
+		} catch (error) {
+			console.error(error)
+			toast.error('Server error')
 		}
-		
-		onPollCreated(poll)
-		onClose()
 	}
 	
 	return (

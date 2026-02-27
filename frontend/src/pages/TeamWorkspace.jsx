@@ -63,19 +63,23 @@ function TeamWorkspace() {
 		})
 		
 		socket.on('poll_updated', (data) => {
-			console.log('📊 POLL UPDATED:', data)
-			// Обновляем activePoll если это тот же poll
-			if (activePoll && activePoll.id === data.poll_id) {
-				setActivePoll(prev => ({
+			setActivePoll(prev => {
+				if (!prev || prev.id !== data.poll_id) return prev
+				
+				return {
 					...prev,
-					options: prev.options.map(opt => {
-						if (opt.id === data.option_id) {
-							return { ...opt, votes: data.votes }
-						}
-						return opt
-					})
-				}))
-			}
+					options: prev.options.map(opt =>
+						opt.id === data.option_id
+							? { ...opt, votes: data.votes }
+							: opt
+					)
+				}
+			})
+		})
+		
+		socket.on('poll_closed', () => {
+			console.log('🛑 POLL CLOSED')
+			setActivePoll(null)
 		})
 		
 		return () => {
@@ -84,8 +88,9 @@ function TeamWorkspace() {
 			socket.off('user_offline')
 			socket.off('new_poll') // ⬅️ ДОБАВЬ
 			socket.off('poll_updated') // ⬅️ ДОБАВЬ
+			socket.off('poll_closed')
 		}
-	}, [socket.socket, activePoll]) // ⬅️ ДОБАВЬ activePoll в dependencies
+	}, [socket.socket])
 	
 	const loadTeamData = async () => {
 		try {
@@ -108,6 +113,7 @@ function TeamWorkspace() {
 				console.log('Team data:', data)
 				setTeamData(data.team)
 				setMembers(data.members || [])
+				setActivePoll(data.active_poll || null)
 			} else {
 				console.error('Failed to load team')
 			}

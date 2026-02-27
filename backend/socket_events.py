@@ -49,7 +49,7 @@ def register_socket_events(socketio):
 
         username = data.get('username')
         password = data.get('password')
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
 
         print(f"📊 Parsed: username={username}, team_id={team_id}, has_pwd={bool(password)}")
 
@@ -91,17 +91,17 @@ def register_socket_events(socketio):
         online_user_ids = list(online_users[team_id].keys())
         print(f"👥 Online users: {online_user_ids}")
 
-        emit('user_online', {
-            'user_id': user['id'],
-            'username': user['username'],
-            'team_id': team_id
-        }, room=room)
-
         emit('joined_team', {
             'status': 'success',
             'team_id': team_id,
             'online_users': online_user_ids
-        })
+        }, room=room)
+
+        emit('user_online', {
+            'user_id': user['id'],
+            'username': user['username'],
+            'team_id': team_id
+        }, room=room, include_self=False)
 
         print(f"✅ SUCCESS: {user['username']} joined team {team_id}")
 
@@ -110,7 +110,7 @@ def register_socket_events(socketio):
         """Покидание комнаты команды"""
         username = data.get('username')
         password = data.get('password')
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
 
         user = authenticate(username, password)
         if not user:
@@ -127,10 +127,10 @@ def register_socket_events(socketio):
                 del online_users[team_id]
 
         # Уведомляем об offline
-        emit('user_offline', {
-            'user_id': user['id'],
-            'team_id': team_id
-        }, room=room)
+        socketio.emit('online_users_list', {
+            'team_id': team_id,
+            'online_users': list(online_users.get(team_id, {}).keys())
+        }, room=f'team_{team_id}')
 
         print(f"User {user['username']} left team {team_id}")
 
@@ -141,7 +141,7 @@ def register_socket_events(socketio):
         """Отправка сообщения в чат команды"""
         username = data.get('username')
         password = data.get('password')
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
         chat_id = data.get('chat_id')
         content = data.get('content')
 
@@ -178,6 +178,7 @@ def register_socket_events(socketio):
 
         message_data = {
             'id': message_id,
+            'team_id': team_id,
             'chat_id': chat_id,
             'user_id': user['id'],
             'username': user['username'],
@@ -195,7 +196,7 @@ def register_socket_events(socketio):
     def handle_typing(data):
         """Уведомление о печати"""
         username = data.get('username')
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
         chat_id = data.get('chat_id')
         is_typing = data.get('is_typing', False)
 
@@ -213,7 +214,7 @@ def register_socket_events(socketio):
         """Присоединение к вайтборду команды"""
         username = data.get('username')
         password = data.get('password')
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
 
         user = authenticate(username, password)
         if not user:
@@ -233,7 +234,7 @@ def register_socket_events(socketio):
     @socketio.on('whiteboard_draw')
     def handle_whiteboard_draw(data):
         """Отправка финального элемента рисования"""
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
         element = data.get('element')
         username = data.get('username')
 
@@ -250,7 +251,7 @@ def register_socket_events(socketio):
     @socketio.on('whiteboard_drawing')
     def handle_whiteboard_drawing(data):
         """Отправка текущего элемента в процессе рисования (live preview)"""
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
         element = data.get('element')
         username = data.get('username')
 
@@ -267,7 +268,7 @@ def register_socket_events(socketio):
     @socketio.on('whiteboard_cursor')
     def handle_whiteboard_cursor(data):
         """Отправка позиции курсора"""
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
         username = data.get('username')
         x = data.get('x')
         y = data.get('y')
@@ -288,7 +289,7 @@ def register_socket_events(socketio):
         """Очистка вайтборда"""
         username = data.get('username')
         password = data.get('password')
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
 
         user = authenticate(username, password)
         if not user:
@@ -306,7 +307,7 @@ def register_socket_events(socketio):
     @socketio.on('leave_whiteboard')
     def handle_leave_whiteboard(data):
         """Покидание вайтборда"""
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
         room = f'whiteboard_{team_id}'
         leave_room(room)
 
@@ -315,7 +316,7 @@ def register_socket_events(socketio):
     @socketio.on('poll_created')
     def handle_poll_created(data):
         """Уведомление о создании голосования"""
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
         poll = data.get('poll')
 
         if not team_id or not poll:
@@ -329,7 +330,7 @@ def register_socket_events(socketio):
     @socketio.on('poll_vote')
     def handle_poll_vote(data):
         """Обновление результатов голосования"""
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
         poll_id = data.get('poll_id')
         option_id = data.get('option_id')
         username = data.get('username')
@@ -352,7 +353,7 @@ def register_socket_events(socketio):
     @socketio.on('join_request_created')
     def handle_join_request(data):
         """Уведомление админов о новой заявке"""
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
         request_data = data.get('request')
 
         if not team_id or not request_data:
@@ -367,10 +368,28 @@ def register_socket_events(socketio):
 
         print(f"New join request for team {team_id}")
 
+    @socketio.on('whiteboard_sync')
+    def handle_whiteboard_sync(data):
+        team_id = int(data.get('team_id'))
+        elements = data.get('elements')
+        username = data.get('username')
+
+        if not team_id or elements is None:
+            return
+
+        room = f'whiteboard_{team_id}'
+
+        emit('whiteboard_sync', {
+            'username': username,
+            'elements': elements
+        }, room=room, include_self=False)
+
+        print(f"Whiteboard synced for team {team_id} by {username}")
+
     @socketio.on('join_request_approved')
     def handle_request_approved(data):
         """Уведомление об одобрении заявки"""
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
         user_id = data.get('user_id')
         username = data.get('username')
 
@@ -391,18 +410,13 @@ def register_socket_events(socketio):
 
     @socketio.on('get_online_users')
     def handle_get_online_users(data):
-        """Получение списка онлайн пользователей команды"""
-        team_id = data.get('team_id')
+        team_id = int(data.get('team_id'))
 
-        if not team_id:
-            emit('error', {'message': 'Missing team_id'})
-            return
-
-        online_user_ids = list(online_users.get(team_id, {}).keys())
+        users = list(online_users.get(team_id, {}).keys())
 
         emit('online_users_list', {
             'team_id': team_id,
-            'online_users': online_user_ids
+            'online_users': users
         })
 
     print("✅ Socket events registered successfully")

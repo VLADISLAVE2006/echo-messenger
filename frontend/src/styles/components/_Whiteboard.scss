@@ -173,10 +173,6 @@
 		
 		span {
 			font-weight: 500;
-			
-			@include h.mobile {
-				display: none;
-			}
 		}
 		
 		&:not(&--active) {

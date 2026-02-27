@@ -2,9 +2,68 @@ from flask import Blueprint, request, jsonify
 from database import get_db
 from auth_routes import authenticate
 import base64
+from flask import current_app
 from datetime import datetime, timedelta
+from socket_events import online_users
 
 team_bp = Blueprint('team', __name__, url_prefix='/api')
+
+from flask import jsonify
+from datetime import datetime
+
+@team_bp.route('/teams/<int:team_id>/stats', methods=['GET'])
+def get_team_stats(team_id):
+    username = request.args.get('username')
+    password = request.args.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Username and password required'}), 400
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    with get_db() as conn:
+        # Проверяем членство
+        member = conn.execute(
+            'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
+            (team_id, user['id'])
+        ).fetchone()
+
+        if not member:
+            return jsonify({'error': 'Not a team member'}), 403
+
+        # Получаем chat_id команды
+        team = conn.execute(
+            'SELECT chat_id FROM teams WHERE id = ?',
+            (team_id,)
+        ).fetchone()
+
+        if not team or not team['chat_id']:
+            return jsonify({
+                'total_messages': 0,
+                'today_messages': 0
+            })
+
+        chat_id = team['chat_id']
+
+        total = conn.execute("""
+            SELECT COUNT(*) as count
+            FROM messages
+            WHERE chat_id = ?
+        """, (chat_id,)).fetchone()['count']
+
+        today = conn.execute("""
+            SELECT COUNT(*) as count
+            FROM messages
+            WHERE chat_id = ?
+            AND DATE(created_at) = DATE('now')
+        """, (chat_id,)).fetchone()['count']
+
+    return jsonify({
+        'total_messages': total,
+        'today_messages': today
+    })
 
 # ---- Вспомогательные функции ----
 
@@ -170,18 +229,10 @@ def get_team(team_id):
                 (team_id, member['id'])
             ).fetchall()
 
-            last_seen = member['last_seen']
-            is_online = False
-            if last_seen:
-                try:
-                    if isinstance(last_seen, str):
-                        last_seen_dt = datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
-                    else:
-                        last_seen_dt = last_seen
-                    if now - last_seen_dt < timedelta(minutes=5):
-                        is_online = True
-                except:
-                    pass
+            is_online = (
+                team_id in online_users and
+                member['id'] in online_users[team_id]
+            )
 
             members_with_roles.append({
                 'id': member['id'],
@@ -478,10 +529,17 @@ def approve_request(team_id, request_id):
         if not join_request:
             return jsonify({'error': 'Request not found or already processed'}), 404
 
-        conn.execute(
-            'INSERT INTO team_members (team_id, user_id) VALUES (?, ?)',
+        # Проверяем что юзер ещё не в команде
+        existing_member = conn.execute(
+            'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
             (team_id, join_request['user_id'])
-        )
+        ).fetchone()
+
+        if not existing_member:
+            conn.execute(
+                'INSERT INTO team_members (team_id, user_id) VALUES (?, ?)',
+                (team_id, join_request['user_id'])
+            )
 
         team = conn.execute('SELECT chat_id FROM teams WHERE id = ?', (team_id,)).fetchone()
         if team and team['chat_id']:
@@ -869,6 +927,9 @@ def create_poll(team_id):
         'options': [{'id': opt['id'], 'text': opt['text'], 'votes': 0} for opt in poll_options]
     }
 
+    room = f'team_{team_id}'
+    current_app.extensions['socketio'].emit('new_poll', poll_data, room=room)
+
     return jsonify({'poll': poll_data}), 201
 
 @team_bp.route('/teams/<int:team_id>/polls/<int:poll_id>/vote', methods=['POST'])
@@ -939,29 +1000,38 @@ def vote_poll(team_id, poll_id):
 
 @team_bp.route('/teams/<int:team_id>/active-poll', methods=['POST'])
 def set_active_poll(team_id):
-    """Установить активное голосование (или закрыть если poll_id=null)"""
     data = request.get_json()
     if not data:
         return jsonify({'error': 'Missing JSON'}), 400
 
     username = data.get('username')
     password = data.get('password')
-    poll_id = data.get('poll_id')  # None чтобы закрыть poll
+    poll_id = data.get('poll_id')  # None = закрыть
 
     user = authenticate(username, password)
     if not user:
         return jsonify({'error': 'Invalid credentials'}), 401
 
     with get_db() as conn:
-        # Проверяем права (админ или создатель)
-        if not is_team_admin(conn, team_id, user['id']) and not is_team_creator(conn, team_id, user['id']):
-            return jsonify({'error': 'Admin rights required'}), 403
+        member = conn.execute(
+            'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
+            (team_id, user['id'])
+        ).fetchone()
 
-        # Устанавливаем активный poll
+        if not member:
+            return jsonify({'error': 'Not a team member'}), 403
+
         conn.execute(
             'UPDATE teams SET active_poll_id = ? WHERE id = ?',
             (poll_id, team_id)
         )
         conn.commit()
+
+    room = f'team_{team_id}'
+    current_app.extensions['socketio'].emit(
+        'poll_closed',
+        {'team_id': team_id},
+        room=room
+    )
 
     return jsonify({'status': 'success'}), 200

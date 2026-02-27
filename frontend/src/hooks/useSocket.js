@@ -70,12 +70,7 @@ export const useSocket = (teamId, user) => {
 		
 		// Cleanup при размонтировании компонента
 		return () => {
-			const password = localStorage.getItem('password')
-			if (password && joinedTeamRef.current) {
-				console.log('🧹 Leaving team on unmount:', joinedTeamRef.current)
-				socketService.leaveTeam(user.username, password, joinedTeamRef.current)
-				joinedTeamRef.current = null
-			}
+			console.log('🧹 Component unmounted (no leave_team)')
 		}
 	}, [teamId, user])
 	
