@@ -1,6 +1,13 @@
 import sqlite3
+import os
+from werkzeug.security import generate_password_hash
 
-DATABASE = 'messenger.db'
+# Всегда используем путь относительно этого файла, независимо от рабочей директории
+DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'messenger.db')
+
+# Данные суперадмина — единственное место, где задаются логин/пароль
+SUPERADMIN_USERNAME = 'admin'
+SUPERADMIN_PASSWORD = 'admin123'
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -219,5 +226,27 @@ def init_db():
 
         # Удаляем устаревшую таблицу team_requests, если она существует
         conn.execute('DROP TABLE IF EXISTS team_requests')
+
+        # Добавление поля is_site_admin в users, если его нет
+        try:
+            conn.execute('ALTER TABLE users ADD COLUMN is_site_admin INTEGER DEFAULT 0')
+        except sqlite3.OperationalError:
+            pass
+
+        # Создаём суперадмина при первом запуске (или восстанавливаем статус)
+        existing = conn.execute(
+            'SELECT id FROM users WHERE username = ?', (SUPERADMIN_USERNAME,)
+        ).fetchone()
+        if existing:
+            conn.execute(
+                'UPDATE users SET is_site_admin = 1 WHERE username = ?',
+                (SUPERADMIN_USERNAME,)
+            )
+        else:
+            conn.execute(
+                'INSERT INTO users (username, password_hash, bio, is_site_admin) VALUES (?, ?, ?, ?)',
+                (SUPERADMIN_USERNAME, generate_password_hash(SUPERADMIN_PASSWORD),
+                 'Суперадминистратор сайта', 1)
+            )
 
         conn.commit()

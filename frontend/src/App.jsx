@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Teams from './pages/Teams'
 import Profile from './pages/Profile'
 import TeamWorkspace from './pages/TeamWorkspace'
+import AdminDashboard from './pages/AdminDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -48,7 +49,15 @@ function App() {
 							</ProtectedRoute>
 						}
 					/>
-					
+					<Route
+						path="/admin"
+						element={
+							<ProtectedRoute>
+								<AdminDashboard />
+							</ProtectedRoute>
+						}
+					/>
+
 					<Route path="/" element={<Navigate to="/dashboard" replace />} />
 				</Routes>
 				

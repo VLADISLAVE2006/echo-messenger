@@ -144,7 +144,7 @@ function TeamWorkspace() {
 			case 'tools':
 				return <ToolsGrid teamId={teamId} teamData={{ ...teamData, members }} socket={socket} />
 			case 'members':
-				return <MembersList teamId={teamId} teamData={{ ...teamData, members }} />
+				return <MembersList teamId={teamId} teamData={{ ...teamData, members }} onRoleChanged={loadTeamData} />
 			default:
 				return <WhiteboardCanvas teamId={teamId} socket={socket} />
 		}

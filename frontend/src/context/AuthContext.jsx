@@ -11,9 +11,31 @@ export function AuthProvider({ children }) {
 	
 	useEffect(() => {
 		const savedUser = localStorage.getItem('user')
+		const savedPassword = localStorage.getItem('password')
 		if (savedUser) {
 			try {
-				setUser(JSON.parse(savedUser))
+				const parsed = JSON.parse(savedUser)
+				setUser(parsed)
+				// Обновляем данные с сервера (например, is_site_admin мог измениться)
+				if (savedPassword) {
+					const params = new URLSearchParams({ username: parsed.username, password: savedPassword })
+					fetch(`http://localhost:5000/api/me?${params}`)
+						.then(r => r.ok ? r.json() : null)
+						.then(data => {
+							if (data?.user) {
+								const fresh = {
+									id: data.user.id,
+									username: data.user.username,
+									avatar: data.user.avatar || null,
+									bio: data.user.bio || 'Добавьте описание о себе',
+									is_site_admin: data.user.is_site_admin || false,
+								}
+								setUser(fresh)
+								localStorage.setItem('user', JSON.stringify(fresh))
+							}
+						})
+						.catch(() => {})
+				}
 			} catch (error) {
 				localStorage.removeItem('user')
 			}
@@ -44,6 +66,7 @@ export function AuthProvider({ children }) {
 				username: data.user.username,
 				avatar: data.user.avatar || null,
 				bio: data.user.bio || 'Добавьте описание о себе',
+				is_site_admin: data.user.is_site_admin || false,
 			}
 			
 			setUser(userData)

@@ -298,7 +298,7 @@ def update_member_roles(team_id, user_id):
 
     username = data.get('username')
     password = data.get('password')
-    new_roles = data.get('roles')
+    new_roles = data.get('roles')  # список кастомных ролей (без 'Admin')
 
     if not username or not password or new_roles is None:
         return jsonify({'error': 'Missing fields'}), 400
@@ -309,57 +309,53 @@ def update_member_roles(team_id, user_id):
 
     with get_db() as conn:
 
-        # Проверяем что текущий пользователь — Admin
+        # Только Admin может редактировать роли
         if not is_team_admin(conn, team_id, user['id']):
             return jsonify({'error': 'Only Admin can change roles'}), 403
+
+        # Нельзя редактировать роли самого себя
+        if user['id'] == user_id:
+            return jsonify({'error': 'Cannot edit your own roles'}), 400
+
+        # Нельзя редактировать роль другого Admin
+        if is_team_admin(conn, team_id, user_id):
+            return jsonify({'error': 'Cannot edit roles of another Admin'}), 403
 
         # Проверяем что участник существует
         member = conn.execute(
             'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
             (team_id, user_id)
         ).fetchone()
-
         if not member:
             return jsonify({'error': 'User not in team'}), 404
 
-        # Получаем всех текущих админов
-        current_admins = conn.execute(
-            'SELECT user_id FROM team_roles WHERE team_id = ? AND role_name = ?',
-            (team_id, 'Admin')
-        ).fetchall()
+        # Фильтруем: Admin нельзя добавить через этот эндпоинт
+        custom_roles = [r.strip() for r in new_roles if r.strip() and r.strip() != 'Admin']
 
-        current_admin_ids = [a['user_id'] for a in current_admins]
+        # Убираем дубликаты
+        custom_roles = list(dict.fromkeys(custom_roles))
 
-        # ===== ЕСЛИ назначаем Admin =====
-        if 'Admin' in new_roles:
+        # Валидация длины
+        for role in custom_roles:
+            if len(role) > 30:
+                return jsonify({'error': f'Role name too long: {role}'}), 400
 
-            # Удаляем Admin у всех остальных
-            conn.execute(
-                'DELETE FROM team_roles WHERE team_id = ? AND role_name = ?',
-                (team_id, 'Admin')
-            )
+        # Удаляем все кастомные роли пользователя (не трогаем Admin)
+        conn.execute(
+            'DELETE FROM team_roles WHERE team_id = ? AND user_id = ? AND role_name != ?',
+            (team_id, user_id, 'Admin')
+        )
 
-            # Назначаем нового
+        # Вставляем новые кастомные роли
+        for role_name in custom_roles:
             conn.execute(
                 'INSERT INTO team_roles (team_id, user_id, role_name) VALUES (?, ?, ?)',
-                (team_id, user_id, 'Admin')
-            )
-
-        else:
-            # ===== ЕСЛИ убираем Admin =====
-
-            # Нельзя убрать последнего админа
-            if user_id in current_admin_ids and len(current_admin_ids) == 1:
-                return jsonify({'error': 'Team must have at least one Admin'}), 400
-
-            conn.execute(
-                'DELETE FROM team_roles WHERE team_id = ? AND user_id = ? AND role_name = ?',
-                (team_id, user_id, 'Admin')
+                (team_id, user_id, role_name)
             )
 
         conn.commit()
 
-    return jsonify({'message': 'Role updated successfully'}), 200
+    return jsonify({'message': 'Roles updated successfully', 'roles': custom_roles}), 200
 
 # ---- ЗАЯВКИ НА ВСТУПЛЕНИЕ (JOIN REQUESTS) ----
 

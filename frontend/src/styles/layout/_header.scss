@@ -89,13 +89,31 @@
 			color: var(--color-primary);
 			font-weight: 600;
 			pointer-events: none;
-			
+
 			&::after {
 				transform: translateX(-50%) scaleX(1);
 			}
 		}
+
+		&--admin {
+			display: inline-flex;
+			align-items: center;
+			gap: h.rem(5);
+			color: var(--color-primary);
+			background-color: var(--color-primary-light);
+			font-weight: 600;
+
+			svg {
+				flex-shrink: 0;
+			}
+
+			@include h.hover(false) {
+				background-color: var(--color-primary);
+				color: var(--color-white);
+			}
+		}
 	}
-	
+
 	&__actions {
 		display: flex;
 		align-items: center;

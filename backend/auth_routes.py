@@ -87,11 +87,35 @@ def login():
                 'id': user['id'],
                 'username': user['username'],
                 'avatar': user['avatar'],
-                'bio': user['bio']
+                'bio': user['bio'],
+                'is_site_admin': bool(user['is_site_admin'])
             }
         }), 200
     else:
         return jsonify({'error': 'Invalid username or password'}), 401
+
+@auth_bp.route('/me', methods=['GET'])
+def get_me():
+    username = request.args.get('username')
+    password = request.args.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Missing credentials'}), 400
+
+    user = authenticate(username, password)
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    return jsonify({
+        'user': {
+            'id': user['id'],
+            'username': user['username'],
+            'avatar': user['avatar'],
+            'bio': user['bio'],
+            'is_site_admin': bool(user['is_site_admin']),
+        }
+    }), 200
+
 
 @auth_bp.route('/logout', methods=['POST'])
 def logout():

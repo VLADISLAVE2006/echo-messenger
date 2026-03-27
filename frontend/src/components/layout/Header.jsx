@@ -86,6 +86,17 @@ function Header() {
 						>
 							Профиль
 						</NavLink>
+
+						{user?.is_site_admin && (
+							<NavLink
+								to="/admin"
+								className={({ isActive }) =>
+									`header__link header__link--admin ${isActive ? 'header__link--active' : ''}`
+								}
+							>
+								Админ
+							</NavLink>
+						)}
 					</nav>
 					
 					<div className="header__actions">
@@ -240,8 +251,18 @@ function Header() {
 								</svg>
 								<span>Профиль</span>
 							</NavLink>
+
+							{user?.is_site_admin && (
+								<NavLink
+									to="/admin"
+									className="mobile-menu__link mobile-menu__link--admin"
+									onClick={closeMobileMenu}
+								>
+									<span>Панель админа</span>
+								</NavLink>
+							)}
 						</nav>
-						
+							
 						<div className="mobile-menu__footer">
 							<button
 								className="mobile-menu__logout"
