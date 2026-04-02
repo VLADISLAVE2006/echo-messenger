@@ -8,7 +8,7 @@ from auth_routes import auth_bp
 from chat_routes import chat_bp
 from message_routes import message_bp
 from team_routes import team_bp
-from admin_routes import admin_bp
+from admin_routes import admin_bp, init_socketio
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # замените на случайную строку
@@ -29,8 +29,9 @@ socketio = SocketIO(
     app,
     cors_allowed_origins='http://localhost:3000',
     async_mode='threading',
-    logger=True,
-    engineio_logger=True
+    allow_upgrades=False,
+    logger=False,
+    engineio_logger=False
 )
 
 init_db()
@@ -45,6 +46,7 @@ app.register_blueprint(admin_bp)
 # Импорт и регистрация socket событий
 from socket_events import register_socket_events
 register_socket_events(socketio)
+init_socketio(socketio)
 
 if __name__ == '__main__':
     # Запуск с SocketIO

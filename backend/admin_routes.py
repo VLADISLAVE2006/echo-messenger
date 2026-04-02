@@ -4,6 +4,12 @@ from auth_routes import authenticate
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
+_socketio = None
+
+def init_socketio(socketio):
+    global _socketio
+    _socketio = socketio
+
 
 def require_site_admin(username, password):
     """Проверяет что пользователь является суперадмином. Возвращает user или None."""
@@ -83,6 +89,15 @@ def delete_user(user_id):
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
+        # Уведомляем пользователя об удалении до фактического удаления
+        if _socketio:
+            _socketio.emit('account_deleted', {}, room=f'user_{user_id}')
+
+        # Удаляем записи с не-каскадными FK на users.id
+        conn.execute('DELETE FROM whiteboards WHERE created_by = ?', (user_id,))
+        conn.execute('DELETE FROM polls WHERE created_by = ?', (user_id,))
+        conn.execute('DELETE FROM teams WHERE created_by = ?', (user_id,))
+        conn.execute('DELETE FROM chats WHERE created_by = ?', (user_id,))
         conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
         conn.commit()
 
@@ -133,5 +148,8 @@ def delete_team(team_id):
 
         conn.execute('DELETE FROM teams WHERE id = ?', (team_id,))
         conn.commit()
+
+    if _socketio:
+        _socketio.emit('team_deleted', {'team_id': team_id}, room=f'team_{team_id}')
 
     return jsonify({'message': 'Team deleted'}), 200

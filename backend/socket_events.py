@@ -406,6 +406,22 @@ def register_socket_events(socketio):
         """Уведомление об отклонении заявки"""
         pass
 
+    # ==================== ЛИЧНАЯ КОМНАТА ====================
+
+    @socketio.on('join_personal_room')
+    def handle_join_personal_room(data):
+        """Пользователь присоединяется к личной комнате для получения системных событий"""
+        username = data.get('username')
+        password = data.get('password')
+
+        user = authenticate(username, password)
+        if not user:
+            return
+
+        room = f'user_{user["id"]}'
+        join_room(room)
+        print(f'🔔 User {username} joined personal room: {room}')
+
     # ==================== УТИЛИТЫ ====================
 
     @socketio.on('get_online_users')

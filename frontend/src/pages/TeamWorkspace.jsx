@@ -81,14 +81,22 @@ function TeamWorkspace() {
 			console.log('🛑 POLL CLOSED')
 			setActivePoll(null)
 		})
-		
+
+		socket.on('team_deleted', (data) => {
+			if (parseInt(data.team_id) === parseInt(teamId)) {
+				toast.error('Группа была удалена администратором')
+				navigate('/dashboard')
+			}
+		})
+
 		return () => {
 			socket.off('joined_team')
 			socket.off('user_online')
 			socket.off('user_offline')
-			socket.off('new_poll') // ⬅️ ДОБАВЬ
-			socket.off('poll_updated') // ⬅️ ДОБАВЬ
+			socket.off('new_poll')
+			socket.off('poll_updated')
 			socket.off('poll_closed')
+			socket.off('team_deleted')
 		}
 	}, [socket.socket])
 	
@@ -114,6 +122,8 @@ function TeamWorkspace() {
 				setTeamData(data.team)
 				setMembers(data.members || [])
 				setActivePoll(data.active_poll || null)
+			} else if (response.status === 404 || response.status === 403) {
+				navigate('/dashboard')
 			} else {
 				console.error('Failed to load team')
 			}

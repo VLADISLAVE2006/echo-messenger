@@ -14,12 +14,13 @@ class SocketService {
 			console.log('🔄 Reusing existing socket')
 			return this.socket
 		}
-		
+
 		console.log('🔌 Creating new socket connection to:', SOCKET_URL)
-		
+
 		this.socket = io(SOCKET_URL, {
 			transports: ['websocket'],
 			autoConnect: true,
+			upgrade: false,
 		})
 		
 		this.socket.on('connect', () => {
@@ -37,9 +38,11 @@ class SocketService {
 	
 	disconnect() {
 		if (this.socket) {
+			this.socket.removeAllListeners()
 			this.socket.disconnect()
 			this.socket = null
 			this.connected = false
+			this.currentTeamId = null
 		}
 	}
 	
@@ -172,6 +175,25 @@ class SocketService {
 		})
 	}
 	
+	joinPersonalRoom(username, password) {
+		const doJoin = () => {
+			if (this.socket?.connected) {
+				this.socket.emit('join_personal_room', { username, password })
+			}
+		}
+
+		if (this.socket?.connected) {
+			doJoin()
+		} else {
+			// Ждём подключения, потом отписываемся
+			const onConnect = () => {
+				doJoin()
+				this.socket?.off('connect', onConnect)
+			}
+			this.socket?.on('connect', onConnect)
+		}
+	}
+
 	// Utility methods
 	getOnlineUsers(teamId) {
 		this.emit('get_online_users', { team_id: teamId })
