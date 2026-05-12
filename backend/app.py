@@ -1,53 +1,61 @@
 from flask import Flask
 from flask_cors import CORS
 from flask_socketio import SocketIO
+from flask_jwt_extended import JWTManager
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from datetime import timedelta
 
 from database import init_db
-from auth_routes import auth_bp
-from chat_routes import chat_bp
-from message_routes import message_bp
-from team_routes import team_bp
-from admin_routes import admin_bp, init_socketio
+from routes.auth import auth_bp
+from routes.chats import chat_bp
+from routes.messages import message_bp
+from routes.teams import team_bp
+from routes.admin import admin_bp, init_socketio
+from sockets.events import register_socket_events
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # замените на случайную строку
+app.secret_key = 'your-secret-key-here'
+app.config['JWT_SECRET_KEY'] = 'jwt-secret-key-change-in-production-32!'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=48)
 app.config['SESSION_PERMANENT'] = True
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=48)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False  # в продакшене с HTTPS установите True
+app.config['SESSION_COOKIE_SECURE'] = False
 
-# Расширенная настройка CORS для поддержки всех необходимых методов и заголовков
 CORS(app,
      supports_credentials=True,
      origins=['http://localhost:3000'],
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
      allow_headers=['Content-Type', 'Authorization'])
 
-# Инициализация SocketIO
+jwt = JWTManager(app)
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=['300 per hour'],
+    storage_uri='memory://'
+)
+
 socketio = SocketIO(
     app,
     cors_allowed_origins='http://localhost:3000',
     async_mode='threading',
-    allow_upgrades=False,
     logger=False,
     engineio_logger=False
 )
 
 init_db()
 
-# Регистрация blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(message_bp)
 app.register_blueprint(team_bp)
 app.register_blueprint(admin_bp)
 
-# Импорт и регистрация socket событий
-from socket_events import register_socket_events
 register_socket_events(socketio)
 init_socketio(socketio)
 
 if __name__ == '__main__':
-    # Запуск с SocketIO
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)

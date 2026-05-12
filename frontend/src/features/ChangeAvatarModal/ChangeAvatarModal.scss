@@ -1,0 +1,43 @@
+@use 'helpers' as h;
+
+.avatar-form {
+	display: flex;
+	flex-direction: column;
+	gap: h.rem(20);
+
+	&__preview {
+		display: flex;
+		justify-content: center;
+	}
+
+	&__img {
+		width: h.rem(120);
+		height: h.rem(120);
+		border-radius: 50%;
+		object-fit: cover;
+		border: h.rem(3) solid var(--color-primary-light);
+		box-shadow: 0 h.rem(4) h.rem(16) rgba(59, 130, 246, 0.2);
+	}
+
+	&__placeholder {
+		width: h.rem(120);
+		height: h.rem(120);
+		border-radius: 50%;
+		background-color: var(--color-bg-secondary);
+		border: h.rem(2) dashed var(--color-border);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: h.rem(13);
+		color: var(--color-text-muted);
+	}
+
+	&__buttons {
+		display: flex;
+		gap: var(--spacing-sm);
+
+		label {
+			display: block;
+		}
+	}
+}
